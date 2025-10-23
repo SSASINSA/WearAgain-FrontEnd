@@ -16,8 +16,8 @@ function AppHeader(props: NativeStackHeaderProps) {
   return (
     <CommonHeader
       title={title}
-      onPressTicket={() => navigation.navigate('Tickets')}
-      onPressStore={() => navigation.navigate('Store')}
+      onPressTicket={() => console.log('티켓 아이콘 클릭')}
+      onPressStore={() => console.log('스토어 아이콘 클릭')}
     />
   );
 }

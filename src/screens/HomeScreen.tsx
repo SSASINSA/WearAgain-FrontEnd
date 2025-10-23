@@ -10,14 +10,9 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Text as CustomText} from '../components/common/Text';
-import TicketIcon from '../assets/icons/ticket.svg';
-import CalendarIcon from '../assets/icons/calendar.svg';
 
 const {width: screenWidth} = Dimensions.get('window');
 
-// 이미지 상수들
-const imgCreditIcon = require('../assets/icons/credit.png');
-const imgClothIcon = require('../assets/icons/cloth.png');
 
 export default function HomeScreen() {
   return (
@@ -39,7 +34,7 @@ export default function HomeScreen() {
           <View style={styles.statsContainer}>
             {/* 교환한 옷 */}
             <View style={styles.statItem}>
-              <Image source={imgClothIcon} style={styles.statIcon} />
+              {/* 아이콘 추가  style={styles.statIcon}*/}
               <CustomText variant="bodyS" color="#888888" align="center">
                 교환한 옷
               </CustomText>
@@ -50,7 +45,7 @@ export default function HomeScreen() {
 
             {/* 크레딧 */}
             <View style={styles.statItem}>
-              <Image source={imgCreditIcon} style={styles.statIcon} />
+              {/* 아이콘 추가  style={styles.statIcon}*/}
               <CustomText variant="bodyS" color="#888888" align="center">
                 크레딧
               </CustomText>
@@ -61,7 +56,7 @@ export default function HomeScreen() {
 
             {/* 교환 티켓 */}
             <View style={styles.statItem}>
-              <TicketIcon width={36} height={36} style={styles.statIcon} />
+              {/* <TicketIcon width={36} height={36} style={styles.statIcon} /> */}
               <CustomText variant="bodyS" color="#888888" align="center">
                 교환 티켓
               </CustomText>
@@ -83,7 +78,7 @@ export default function HomeScreen() {
         <View style={styles.supportBanner}>
           <View style={styles.supportContent}>
             <View style={styles.supportIcons}>
-              <CalendarIcon width={24} height={24} style={styles.supportIcon} />
+              {/* 아이콘 추가  style={styles.supportIcon}*/}
             </View>
             <CustomText variant="headlineM" color="#FFFFFF" style={styles.supportText}>
               당신의 마음을 입히세요
