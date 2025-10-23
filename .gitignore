@@ -30,7 +30,6 @@ ios/*.xcworkspace/xcuserdata/
 ios/*.xcodeproj/xcuserdata/
 ios/*.xcodeproj/project.xcworkspace/xcuserdata/
 ios/*.xcworkspace/xcshareddata/
-ios/Podfile.lock
 
 # Android/IntelliJ
 #
