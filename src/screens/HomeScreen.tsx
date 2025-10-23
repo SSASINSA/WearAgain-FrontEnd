@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
       height: 8,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 25,
+    shadowRadius: 10,
     elevation: 8,
   },
   profileHeader: {

@@ -11,7 +11,6 @@ export default function MyPageNavigation() {
       screenOptions={{
         header: () => (
           <CommonHeader
-            title="내정보"
             onPressTicket={() => console.log('티켓 아이콘 클릭')}
             onPressStore={() => console.log('스토어 아이콘 클릭')}
           />

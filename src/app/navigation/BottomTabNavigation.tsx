@@ -8,10 +8,10 @@ import CommunityStack from './CommunityNavigation';
 import MyPageStack from './MyPageNavigation';
 import {Text as CustomText} from '../../components/common/Text';
 import HomeIcon from '../../assets/icons/home.svg';
-import CalendarIcon from '../../assets/icons/calendar.svg';
 import CommunityIcon from '../../assets/icons/community.svg';
 import ProfileIcon from '../../assets/icons/profile.svg';
 import QrCodeIcon from '../../assets/icons/qrcode.svg';
+import ClothIcon from '../../assets/icons/cloth.svg';
 
 
 
@@ -54,9 +54,9 @@ export default function BottomTabNavigation() {
                 style={styles.navItem}
                 onPress={() => props.navigation.navigate('Growing')}
               >
-                <CalendarIcon 
-                  width={20} 
-                  height={20} 
+                <ClothIcon 
+                  width={21} 
+                  height={21} 
                   color={activeTabIndex === 1 ? '#06B0B7' : '#9CA3AF'}
                   style={styles.navIcon} 
                 />

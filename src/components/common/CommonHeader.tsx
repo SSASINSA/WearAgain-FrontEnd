@@ -7,13 +7,11 @@ import TicketIcon from '../../assets/icons/ticket.svg';
 import StoreIcon from '../../assets/icons/store.svg';
 
 type CommonHeaderProps = {
-  title: string; // 화면마다 변경할 제목
   onPressTicket?: () => void;
   onPressStore?: () => void;
 };
 
 export default function CommonHeader({
-  title,
   onPressTicket,
   onPressStore,
 }: CommonHeaderProps) {
@@ -24,13 +22,6 @@ export default function CommonHeader({
         <View style={styles.headerContent}>
           {/* 왼쪽 영역 (비워둠: 중앙 정렬을 위한 공간) */}
           <View style={styles.headerLeft} />
-
-          {/* 중앙 제목 */}
-          <View style={styles.headerCenter}>
-            <CustomText variant='headlineL' color='#000000' weight='bold'>
-              {title}
-            </CustomText>
-          </View>
 
           {/* 오른쪽 아이콘 영역 */}
           <View style={styles.headerRight}>
@@ -49,15 +40,15 @@ export default function CommonHeader({
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F2F2F2',
   },
   header: {
     height: 55,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F2F2F2',
     paddingTop: 5,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomWidth:1,
+    borderBottomColor:'#E5E7EB',
   },
   headerContent: {
     flexDirection: 'row',
