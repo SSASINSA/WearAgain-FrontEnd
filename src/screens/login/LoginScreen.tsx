@@ -3,7 +3,6 @@ import {
   Image,
   ImageSourcePropType,
   Linking,
-  ScrollView,
   StatusBar,
   StyleSheet,
   View,
@@ -171,10 +170,7 @@ export default function LoginScreen({
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.container}>
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            bounces={false}
-            showsVerticalScrollIndicator={false}>
+          <View style={styles.content}>
             <View style={styles.topSection}>
               <View style={styles.illustrationWrapper}>
                 <Image
@@ -223,7 +219,7 @@ export default function LoginScreen({
                 />
               ))}
             </View>
-          </ScrollView>
+          </View>
 
           <View style={styles.legalSection}>
             <Text variant="bodyS" align="center" color={COLORS.secondaryText}>
@@ -278,8 +274,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 24,
   },
-  scrollContent: {
-    flexGrow: 1,
+  content: {
+    flex: 1,
     justifyContent: 'center',
     gap: 48,
   },
