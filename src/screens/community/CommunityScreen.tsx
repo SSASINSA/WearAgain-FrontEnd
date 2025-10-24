@@ -55,7 +55,7 @@ const samplePosts: PostItemProps[] = [
     commentCount: 19,
   },
 ];
-
+// 이슈 연결 테스트
 export default function CommunityScreen() {
   const handlePostPress = (postId: string) => {
     console.log('게시글 클릭:', postId);
