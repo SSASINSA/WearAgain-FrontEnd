@@ -1,0 +1,37 @@
+name: Auto Add Issue to Project
+
+on:
+  issues:
+    types: [opened]
+
+permissions: # 추가
+  contents: write # 브랜치 생성 및 푸시 권한을 부여
+  
+jobs:
+  create-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+      - name: Create branch
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          # 브랜치 이름 생성
+          BRANCH_NAME="feature/${ISSUE_NUMBER}"
+          # 브랜치 생성 및 푸시
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b $BRANCH_NAME
+          git push origin $BRANCH_NAME
+      - name: Comment on Issue
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/$REPO/issues/$ISSUE_NUMBER/comments \
+            -d "{\"body\": \"🚀 브랜치가 생성되었습니다: \`feat/${ISSUE_NUMBER}\`\"}"
