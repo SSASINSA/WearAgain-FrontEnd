@@ -14,6 +14,7 @@ const samplePosts: PostItemProps[] = [
     title: '이 옷 이번에 내려는데 어때요?',
     content:
       '제가 고등학생때부터 7년 입은 옷이에요.\n깨끗하게 입고 다녔는데 이제 21% 파티에\n내보려고 해요. 혹시 이번 파티에 참여하시면\n이 재킷 가져가실 분 있나요?',
+    isLiked: false,
     likeCount: 24,
     commentCount: 12,
   },
@@ -25,6 +26,7 @@ const samplePosts: PostItemProps[] = [
     title: '아름다운X수선혁명Lab 후기',
     content:
       '간단하게 단추 수선만 스스로 할 줄 알았는데\n이번에 수선워크샵을 참여하면서 재봉틀을 사용하는 수선을\n배웠어요. 가르쳐주시는 분이 정말 친절하게 하나하나\n알려주셔서 잘 배울 수 있었어요. 다음에도 참여하고 싶어요.',
+    isLiked: true,
     likeCount: 89,
     commentCount: 34,
   },
@@ -36,6 +38,7 @@ const samplePosts: PostItemProps[] = [
     title: '이 코트 수선 가능한가요?',
     content:
       '오래된 코트인데 소매 부분이 좀 닳았어요.\n수선이 가능한지 궁금합니다.',
+    isLiked: true,
     likeCount: 15,
     commentCount: 8,
   },
@@ -47,6 +50,7 @@ const samplePosts: PostItemProps[] = [
     title: '수선 후기 공유합니다',
     content:
       '바지 길이 수선 받았는데 정말 깔끔하게 잘 되었어요.\n다음에도 이용하고 싶습니다.',
+    isLiked: false,
     likeCount: 42,
     commentCount: 19,
   },
