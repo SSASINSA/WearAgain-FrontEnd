@@ -94,7 +94,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
