@@ -7,6 +7,9 @@ import {
   ImageSourcePropType,
 } from 'react-native';
 import {Text} from '../../components/common/Text';
+import LikeEmptyIcon from '../../assets/icons/like_empty.svg';
+import LikeFilledIcon from '../../assets/icons/like_filled.svg';
+import CommentIcon from '../../assets/icons/comment.svg';
 
 export interface PostItemProps {
   id: string;
@@ -16,6 +19,7 @@ export interface PostItemProps {
   title: string;
   content: string;
   image?: ImageSourcePropType;
+  isLiked: boolean;
   likeCount: number;
   commentCount: number;
   onPress?: () => void;
@@ -30,6 +34,7 @@ export function PostItemComponent({
   title,
   content,
   image,
+  isLiked,
   likeCount,
   commentCount,
   onPress,
@@ -96,8 +101,11 @@ export function PostItemComponent({
       <View style={styles.actionsContainer}>
         <TouchableOpacity style={styles.actionButton} onPress={onLikePress}>
           <View style={styles.actionIcon}>
-            {/* 좋아요 아이콘 - 실제로는 SVG 아이콘을 사용해야 함 */}
-            <View style={styles.heartIcon} />
+            {isLiked ? (
+              <LikeFilledIcon width={14} height={14} color="#E30505" />
+            ) : (
+              <LikeEmptyIcon width={14} height={14} color="#6B7280" />
+            )}
           </View>
           <Text variant="bodyM" color="#6B7280" style={styles.actionText}>
             {likeCount}
@@ -106,8 +114,7 @@ export function PostItemComponent({
 
         <TouchableOpacity style={styles.actionButton} onPress={onCommentPress}>
           <View style={styles.actionIcon}>
-            {/* 댓글 아이콘 - 실제로는 SVG 아이콘을 사용해야 함 */}
-            <View style={styles.commentIcon} />
+            <CommentIcon width={14} height={14} color="#6B7280" />
           </View>
           <Text variant="bodyM" color="#6B7280" style={styles.actionText}>
             {commentCount}
