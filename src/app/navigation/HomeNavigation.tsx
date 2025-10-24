@@ -3,7 +3,7 @@ import { createNativeStackNavigator, NativeStackHeaderProps } from '@react-navig
 import CalendarStack from './CalendarNavigation';
 import StoreStack from './StoreNavigation';
 import TicketsStack from './TicketsNavigation';
-import HomeScreen from '../../screens/HomeScreen';
+import HomeScreen from '../../screens/home/HomeScreen';
 import CommonHeader from '../../components/common/CommonHeader';
 
 
