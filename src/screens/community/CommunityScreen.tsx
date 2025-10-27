@@ -1,6 +1,7 @@
 import React from 'react';
 import {View, StyleSheet, FlatList, TouchableOpacity} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
 import {PostItemComponent, PostItemProps} from './PostItemComponent';
 import PlusIcon from '../../assets/icons/plus.svg';
 
@@ -55,11 +56,13 @@ const samplePosts: PostItemProps[] = [
     commentCount: 19,
   },
 ];
-// 이슈 연결 테스트
+
 export default function CommunityScreen() {
+  const navigation = useNavigation<any>();
+
   const handlePostPress = (postId: string) => {
     console.log('게시글 클릭:', postId);
-    // TODO: 게시글 상세 페이지로 네비게이션
+    navigation.navigate('PostDetail', {postId});
   };
 
   const handleLikePress = (postId: string) => {
