@@ -1,6 +1,6 @@
 import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
-import BottomTabNavigation from './BottomTabNavigation';
+import MainNavigation from './MainNavigation';
 import {LoginScreen} from '../../screens/login';
 
 export default function RootNavigation() {
@@ -9,7 +9,7 @@ export default function RootNavigation() {
   return (
     <NavigationContainer>
       {isLoggedIn ? (
-        <BottomTabNavigation />
+        <MainNavigation />
       ) : (
         <LoginScreen onTemporaryContinue={() => setIsLoggedIn(true)} />
       )}
