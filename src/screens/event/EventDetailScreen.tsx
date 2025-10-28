@@ -9,6 +9,7 @@ import {
 import {useRoute, RouteProp} from '@react-navigation/native';
 import {Text} from '../../components/common/Text';
 import EventDetailContent from './EventDetailContent';
+import EventApplicationModal from './EventApplicationModal';
 import DetailHeader from '../../components/common/DetailHeader';
 
 export interface EventDetailProps {
@@ -76,6 +77,12 @@ export default function EventDetailScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <EventApplicationModal
+        isVisible={isModalVisible}
+        onClose={() => setIsModalVisible(false)}
+        onConfirm={handleApplicationConfirm}
+      />
     </SafeAreaView>
   );
 }
