@@ -1,11 +1,12 @@
 import React from 'react';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import PlaceholderScreen from '../../screens/PlaceholderScreen';
+import { createNativeStackNavigator, NativeStackHeaderProps } from '@react-navigation/native-stack';
 import CommonHeader from '../../components/common/CommonHeader';
+import EventScreen from '../../screens/event/EventScreen';
+import PlaceholderScreen from '../../screens/PlaceholderScreen';
 
 const Stack = createNativeStackNavigator();
 
-export default function GrowingNavigation() {
+export default function EventNavigation() {
   return (
     <Stack.Navigator
       screenOptions={{
@@ -17,9 +18,8 @@ export default function GrowingNavigation() {
         ),
       }}
     >
-      <Stack.Screen name="Growing" component={PlaceholderScreen} />
-      <Stack.Screen name="Rank" component={PlaceholderScreen} />
-      <Stack.Screen name="ClothBook" component={PlaceholderScreen} />
+      <Stack.Screen name="EventList" component={EventScreen} />
+      <Stack.Screen name="CommunityDetail" component={PlaceholderScreen} />
     </Stack.Navigator>
   );
 }

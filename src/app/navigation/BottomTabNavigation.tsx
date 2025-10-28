@@ -3,7 +3,7 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {Image, View, TouchableOpacity, StyleSheet} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import HomeStack from './HomeNavigation';
-import GrowingStack from './GrowingNavigation';
+import EventStack from './EventNavigation';
 import CommunityStack from './CommunityNavigation';
 import MyPageStack from './MyPageNavigation';
 import {Text as CustomText} from '../../components/common/Text';
@@ -52,7 +52,7 @@ export default function BottomTabNavigation() {
               {/* 행사 */}
               <TouchableOpacity 
                 style={styles.navItem}
-                onPress={() => props.navigation.navigate('Growing')}
+                onPress={() => props.navigation.navigate('Event')}
               >
                 <ClothIcon 
                   width={21} 
@@ -117,7 +117,7 @@ export default function BottomTabNavigation() {
       }}
     >
       <Tab.Screen name="Home" component={HomeStack} />
-      <Tab.Screen name="Growing" component={GrowingStack} />
+      <Tab.Screen name="Event" component={EventStack} />
       <Tab.Screen name="Community" component={CommunityStack} />
       <Tab.Screen name="MyPage" component={MyPageStack} />
     </Tab.Navigator>
