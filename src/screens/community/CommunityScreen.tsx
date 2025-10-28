@@ -77,7 +77,7 @@ export default function CommunityScreen() {
 
   const handleCreatePost = () => {
     console.log('게시글 작성');
-    // TODO: 게시글 작성 페이지로 네비게이션
+    navigation.navigate('PostRegister');
   };
 
   const renderPostItem = ({item}: {item: PostItemProps}) => (
