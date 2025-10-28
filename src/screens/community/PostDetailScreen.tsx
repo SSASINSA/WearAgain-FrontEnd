@@ -16,6 +16,7 @@ import PostDetailCommentComponent, {
   Comment,
 } from './PostDetailCommentComponent';
 import PostDetailInputComponent from './PostDetailInputComponent';
+import DetailHeader from '../../components/common/DetailHeader';
 
 export interface PostDetailProps {
   id: string;
@@ -106,15 +107,7 @@ export default function PostDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* 헤더 영역 */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleBackPress}
-          activeOpacity={0.7}>
-          {/* 백 아이콘은 실제로는 SVG 아이콘을 사용해야 함 */}
-          <View style={styles.backIcon} />
-        </TouchableOpacity>
-      </View>
+      <DetailHeader />
 
       <ScrollView
         style={styles.scrollView}
