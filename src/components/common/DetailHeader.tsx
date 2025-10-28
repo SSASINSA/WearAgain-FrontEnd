@@ -1,11 +1,10 @@
-// components/CommonHeader.tsx
 import React from 'react';
 import { View, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import BackIcon from '../../assets/icons/back.svg';
 import { useNavigation } from '@react-navigation/native';
 
 
-export default function CommonHeader({}) {
+export default function DetailHeader({}) {
   const navigation = useNavigation();
   return (
     <View style={styles.header}>
