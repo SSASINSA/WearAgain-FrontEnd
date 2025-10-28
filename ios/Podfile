@@ -5,32 +5,52 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, min_ios_version_supported
+platform :ios, '16.0'
 prepare_react_native_project!
-
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
-end
 
 target 'wear_again' do
   config = use_native_modules!
 
   use_react_native!(
     :path => config[:reactNativePath],
-    # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/..",
     :new_arch_enabled => false
   )
 
+  pod 'react-native-config', :path => '../node_modules/react-native-config'
+  pod 'kakao-login', :path => '../node_modules/@react-native-seoul/kakao-login'
+  # pre_install do |installer|
+  #   installer.pod_targets.each do |pod|
+  #     if pod.name == 'glog'
+  #       puts "⚡️ Skipping glog prepare command"
+  #       def pod.build_type; Pod::BuildType.static_library end
+  #       pod.script_phase = nil
+  #     end
+  #   end
+  # end
+  # pod 'glog', :git => 'https://github.com/facebook/react-native.git', :tag => 'v0.79.4'
+
   post_install do |installer|
-    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
     react_native_post_install(
       installer,
       config[:reactNativePath],
       :mac_catalyst_enabled => false,
-      # :ccache_enabled => true
     )
+
+    # 모든 target에 대해 설정
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        # Hermes / React-Runtime 충돌 방지
+        config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
+
+        # react-native-config 전용 처리
+        if target.name == 'react-native-config'
+          config.build_settings['ENVFILE'] = File.join(
+            File.dirname(__dir__), # 프로젝트 루트
+            (ENV['ENVFILE'] || '.env') # ENVFILE 지정 없으면 기본 .env
+          )
+        end
+      end
+    end
   end
 end

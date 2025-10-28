@@ -8,15 +8,17 @@ import {
   View,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {performSocialLogin} from '../../api/auth/socialLogin';
+import {mapAuthErrorToMessage} from '../../api/auth/errorMessages';
 import {Text} from '../../components/common/Text';
 import {SocialLoginButton} from '../../components/login/SocialLoginButton';
-
-type SocialProvider = 'kakao' | 'apple' | 'google';
+import type {AuthCallbackResponse, SocialProvider} from '../../types/auth';
 
 interface LoginScreenProps {
   onProviderPress?: (provider: SocialProvider) => Promise<void> | void;
   initialErrorMessage?: string | null;
   onTemporaryContinue?: () => void;
+  onLoginSuccess?: (payload: AuthCallbackResponse) => void;
 }
 
 interface ProviderConfig {
@@ -81,8 +83,6 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
   },
 ];
 
-const DEFAULT_ERROR_MESSAGE = '로그인에 실패했어요. 잠시 후 다시 시도해 주세요.';
-
 function isPromise<T>(value: unknown): value is Promise<T> {
   return (
     typeof value === 'object' &&
@@ -123,6 +123,7 @@ export default function LoginScreen({
   onProviderPress,
   initialErrorMessage = null,
   onTemporaryContinue,
+  onLoginSuccess,
 }: LoginScreenProps) {
   const [loadingProvider, setLoadingProvider] =
     React.useState<SocialProvider | null>(null);
@@ -146,21 +147,29 @@ export default function LoginScreen({
       setLoadingProvider(provider);
 
       try {
-        const result = onProviderPress?.(provider);
-        if (isPromise(result)) {
-          await result;
+        if (onProviderPress) {
+          const result = onProviderPress(provider);
+          if (isPromise(result)) {
+            await result;
+          }
+          return;
         }
+        const loginResult = await performSocialLogin(provider);
+        onLoginSuccess?.(loginResult);
+        onTemporaryContinue?.();
       } catch (error) {
-        const readableMessage =
-          error instanceof Error && error.message
-            ? error.message
-            : DEFAULT_ERROR_MESSAGE;
+        if (__DEV__) {
+          // eslint-disable-next-line no-console
+          console.error('Social login failed', error);
+        }
+
+        const readableMessage = mapAuthErrorToMessage(provider, error);
         setErrorMessage(readableMessage);
       } finally {
         setLoadingProvider(null);
       }
     },
-    [loadingProvider, onProviderPress],
+    [loadingProvider, onLoginSuccess, onProviderPress, onTemporaryContinue],
   );
 
   const isLoading = React.useMemo(() => loadingProvider !== null, [loadingProvider]);

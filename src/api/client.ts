@@ -1,8 +1,7 @@
 import axios from 'axios';
+import {getEnvOrThrow} from '../utils/env';
 
-const API_BASE_URL = __DEV__
-  ? 'http://localhost:3000/api'
-  : 'https://api.wearagain.com';
+const API_BASE_URL = getEnvOrThrow('API_BASE_URL');
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
