@@ -5,18 +5,15 @@ import {
   ImageSourcePropType,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import LikeEmptyIcon from '../../assets/icons/like_empty.svg';
-import LikeFilledIcon from '../../assets/icons/like_filled.svg';
+import DetailHeader from '../../components/common/DetailHeader';
 import {Text} from '../../components/common/Text';
 import PostDetailCommentComponent, {
   Comment,
 } from './PostDetailCommentComponent';
 import PostDetailInputComponent from './PostDetailInputComponent';
-import DetailHeader from '../../components/common/DetailHeader';
 
 export interface PostDetailProps {
   id: string;
@@ -105,7 +102,7 @@ export default function PostDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* 헤더 영역 */}
       <DetailHeader />
 
