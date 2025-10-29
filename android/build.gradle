@@ -18,4 +18,6 @@ buildscript {
     }
 }
 
+
+project.ext.envFile = rootProject.file('.env')
 apply plugin: "com.facebook.react.rootproject"

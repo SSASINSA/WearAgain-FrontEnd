@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">wear_again</string>
+    <!-- kakao_app_key and kakao_scheme are injected via react-native-config (see android/app/build.gradle) -->
 </resources>

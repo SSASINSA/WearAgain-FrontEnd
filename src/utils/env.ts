@@ -2,18 +2,7 @@ import Config from 'react-native-config';
 
 type EnvMap = Record<string, string | undefined>;
 
-const moduleEnv: EnvMap = sanitizeEntries(Config as EnvMap);
-
-function sanitizeEntries(entries: EnvMap): EnvMap {
-  const result: EnvMap = {};
-  Object.entries(entries).forEach(([key, value]) => {
-    const sanitized = sanitizeEnvValue(value);
-    if (sanitized) {
-      result[key] = sanitized;
-    }
-  });
-  return result;
-}
+let cachedModuleEnv: EnvMap | undefined;
 
 function sanitizeEnvValue(value: string | undefined): string | undefined {
   if (typeof value !== 'string') {
@@ -24,6 +13,24 @@ function sanitizeEnvValue(value: string | undefined): string | undefined {
     return undefined;
   }
   return trimmed;
+}
+
+function sanitizeEntries(entries: EnvMap): EnvMap {
+  const result: EnvMap = {};
+  Object.keys(entries).forEach(key => {
+    const sanitized = sanitizeEnvValue(entries[key]);
+    if (sanitized) {
+      result[key] = sanitized;
+    }
+  });
+  return result;
+}
+
+function getSanitizedModuleEnv(): EnvMap {
+  if (!cachedModuleEnv) {
+    cachedModuleEnv = sanitizeEntries(Config as EnvMap);
+  }
+  return cachedModuleEnv;
 }
 
 interface WearAgainEnv {
@@ -39,7 +46,12 @@ function getGlobalEnv(): WearAgainEnv | undefined {
 }
 
 export function getEnv(name: string): string | undefined {
-  const moduleValue = moduleEnv[name];
+  const directNativeValue = sanitizeEnvValue((Config as EnvMap)[name]);
+  if (directNativeValue) {
+    return directNativeValue;
+  }
+
+  const moduleValue = getSanitizedModuleEnv()[name];
   if (typeof moduleValue === 'string' && moduleValue.length > 0) {
     return moduleValue;
   }
