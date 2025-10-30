@@ -1,0 +1,10 @@
+//
+//  Config.xcconfig
+//  wear_again
+//
+//  Created by 엄유상 on 10/28/25.
+//
+
+// Configuration settings file format documentation can be found at:
+// https://developer.apple.com/documentation/xcode/adding-a-build-configuration-file-to-your-project
+#include? "tmp.xcconfig"

@@ -4,7 +4,7 @@ import MainNavigation from './MainNavigation';
 import {LoginScreen} from '../../screens/login';
 
 export default function RootNavigation() {
-  const [isLoggedIn, setIsLoggedIn] = React.useState(true);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
 
   return (
     <NavigationContainer>

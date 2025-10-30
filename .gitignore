@@ -2,6 +2,9 @@
 #
 .DS_Store
 
+#.env file
+.env
+
 # Xcode
 #
 build/
@@ -30,6 +33,7 @@ ios/*.xcworkspace/xcuserdata/
 ios/*.xcodeproj/xcuserdata/
 ios/*.xcodeproj/project.xcworkspace/xcuserdata/
 ios/*.xcworkspace/xcshareddata/
+ios/tmp.xcconfig
 
 # Android/IntelliJ
 #

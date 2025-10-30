@@ -71,6 +71,21 @@ def enableProguardInReleaseBuilds = false
  * this variant is about 6MiB larger per architecture than default.
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+project.ext.envConfigFiles = [
+    developDebug: ".env",
+    developRelease: ".env",
+    productDebug: ".env",
+    productRelease: ".env",
+    anothercustombuild: ".env",
+]
+apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
+
+// project.ext.react = [
+//     enableHermes: true,
+//     codegenExcludes: [
+//         "react-native-svg"
+//     ]
+// ]
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -78,12 +93,27 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.wear_again"
+    flavorDimensions "env"
+    productFlavors {
+        develop {
+            dimension "env"
+        }
+        product {
+            dimension "env"
+        }
+    }
+    
     defaultConfig {
         applicationId "com.wear_again"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+
+        def kakaoAppKey = project.env.get("KAKAO_APP_KEY") ?: ""
+        def kakaoScheme = kakaoAppKey ? "kakao${kakaoAppKey}" : ""
+        resValue "string", "kakao_app_key", kakaoAppKey
+        resValue "string", "kakao_scheme", kakaoScheme
     }
     signingConfigs {
         debug {
@@ -109,8 +139,9 @@ android {
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
+    implementation project(':react-native-config')
     implementation("com.facebook.react:react-android")
-
+    
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
