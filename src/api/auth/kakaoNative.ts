@@ -7,7 +7,6 @@ export async function acquireKakaoIdToken(): Promise<string> {
 
   try {
     token = await kakaoLogin();
-    console.log(token);
     const idToken = extractIdToken(token);
     if (idToken) {
       return idToken;

@@ -131,6 +131,10 @@ export default function LoginScreen({
     initialErrorMessage,
   );
 
+  React.useEffect(() => {
+    setErrorMessage(initialErrorMessage);
+  }, [initialErrorMessage]);
+
   const handleOpenLink = React.useCallback((url: string) => {
     Linking.openURL(url).catch(() => {
       // 외부 링크가 열리지 않는 경우에도 크래시를 방지

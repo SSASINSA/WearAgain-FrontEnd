@@ -29,7 +29,6 @@ interface KakaoIdTokenLoginRequestPayload {
 export async function performSocialLogin(provider: SocialProvider): Promise<AuthCallbackResponse> {
   const config = resolveProviderConfig(provider);
   if (provider === 'kakao') {
-    console.log(config);
     return performKakaoNativeLogin(config);
   }
   
@@ -69,7 +68,6 @@ async function performKakaoNativeLogin(
 ): Promise<AuthCallbackResponse> {
   try {
     const idToken = await acquireKakaoIdToken();
-    console.log(idToken);
     const response = await retry(
       () =>
         apiClient.post<AuthCallbackSuccessResponse>(
@@ -81,10 +79,9 @@ async function performKakaoNativeLogin(
         shouldRetry: error => shouldRetryExchange(error),
       },
     );
-    console.log(response);
+    console.log(response.data);
     return createAuthCallbackResponse('kakao', response.data);
   } catch (error) {
-    console.log(error);
     throw toAuthError('kakao', error);
   }
 }
