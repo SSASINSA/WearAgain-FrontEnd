@@ -1,5 +1,6 @@
-import axios from 'axios';
+import axios, {InternalAxiosRequestConfig, AxiosError} from 'axios';
 import {getEnvOrThrow} from '../utils/env';
+import {useAuthStore} from '../store/auth.store';
 
 const API_BASE_URL = getEnvOrThrow('API_BASE_URL');
 
@@ -13,9 +14,8 @@ export const apiClient = axios.create({
 
 // Request interceptor
 apiClient.interceptors.request.use(
-  config => {
-    // Add auth token if available
-    const token = getAuthToken();
+  (config: InternalAxiosRequestConfig) => {
+    const token = useAuthStore.getState().accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -31,22 +31,33 @@ apiClient.interceptors.response.use(
   response => {
     return response;
   },
-  error => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
-      clearAuthToken();
-      // Redirect to login or refresh token
+  async error => {
+    const originalRequest = error.config as (InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    });
+
+    if (originalRequest?.url?.includes('/auth/refresh')) {
+      return Promise.reject(error);
     }
+
+    if (shouldAttemptRefresh(error) && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const accessToken = await useAuthStore.getState().refreshSession();
+
+      if (accessToken) {
+        originalRequest.headers = {
+          ...originalRequest.headers,
+          Authorization: `Bearer ${accessToken}`,
+        };
+        return apiClient(originalRequest);
+      }
+    }
+
     return Promise.reject(error);
   },
 );
 
-// Helper functions for token management
-function getAuthToken(): string | null {
-  // TODO: Implement token retrieval from secure storage
-  return null;
-}
-
-function clearAuthToken(): void {
-  // TODO: Implement token clearing from secure storage
+function shouldAttemptRefresh(error: AxiosError): boolean {
+  const status = error.response?.status;
+  return status === 401 || status === 403;
 }
