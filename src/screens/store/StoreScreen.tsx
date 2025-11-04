@@ -3,7 +3,7 @@ import {FlatList, View, StyleSheet} from 'react-native';
 import {Text} from '../../components/common/Text';
 import ProductCard from './ProductCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DetailHeader from '../../components/common/DetailHeader';
+import StoreHeader from './StoreHeader';
 
 export default function StoreScreen() {
   const products = [
@@ -51,7 +51,8 @@ export default function StoreScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* 헤더 영역 */}
-      <DetailHeader />
+      <StoreHeader credit={99999} />
+
       <FlatList
         data={products}
         keyExtractor={item => item.id}
