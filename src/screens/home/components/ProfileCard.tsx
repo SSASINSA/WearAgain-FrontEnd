@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Text as CustomText } from '../../../components/common/Text';
 import ClothIcon from '../../../assets/icons/clothIcon.svg';
 import CreditIcon from '../../../assets/icons/creditIcon.svg';
@@ -21,6 +22,8 @@ interface ProfileCardProps {
 }
 
 export const ProfileCard: React.FC<ProfileCardProps> = ({ userStats }) => {
+  const navigation = useNavigation();
+
   const renderStatIcon = (statId: string) => {
     switch (statId) {
       case 'clothes':
@@ -32,6 +35,10 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ userStats }) => {
       default:
         return null;
     }
+  };
+
+  const handleGrowButtonPress = () => {
+    navigation.navigate('Growing' as never);
   };
 
   return (
@@ -61,7 +68,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ userStats }) => {
 
       {/* 내 옷 키우러 가기 버튼 */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.growButton}>
+        <TouchableOpacity style={styles.growButton} onPress={handleGrowButtonPress}>
           <CustomText variant="labelM" color="#FFFFFF" weight="bold" align="center">
             내 옷 키우러 가기 🌱
           </CustomText>
