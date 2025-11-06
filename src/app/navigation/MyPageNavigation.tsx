@@ -8,14 +8,14 @@ const Stack = createNativeStackNavigator();
 export default function MyPageNavigation() {
   return (
     <Stack.Navigator
-      screenOptions={{
+      screenOptions={({navigation}) => ({
         header: () => (
           <CommonHeader
             onPressTicket={() => console.log('티켓 아이콘 클릭')}
-            onPressStore={() => console.log('스토어 아이콘 클릭')}
+            onPressStore={() => navigation.getParent()?.navigate('Store')}
           />
         ),
-      }}
+      })}
     >
       <Stack.Screen name="MyPage" component={PlaceholderScreen} />
     </Stack.Navigator>
