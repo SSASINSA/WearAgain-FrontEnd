@@ -1,4 +1,4 @@
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {
   View,
   StyleSheet,
@@ -9,21 +9,40 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  FlatList,
+  PermissionsAndroid,
+  StatusBar,
 } from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
+import {CameraRoll} from '@react-native-camera-roll/camera-roll';
 import {Text} from '../../components/common/Text';
 import DetailHeader from '../../components/common/DetailHeader';
 import PlusIcon from '../../assets/icons/plus.svg';
 
 type KeywordType = '후기' | '수선' | '질문' | '기타' | null;
 
+interface PhotoNode {
+  image: {
+    uri: string;
+    width: number;
+    height: number;
+  };
+  type: string;
+}
+
 export default function PostRegisterScreen() {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [selectedKeyword, setSelectedKeyword] = useState<KeywordType>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [photos, setPhotos] = useState<PhotoNode[]>([]);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [endCursor, setEndCursor] = useState<string | null>(null);
 
   const titleInputRef = useRef<TextInput>(null);
   const contentInputRef = useRef<TextInput>(null);
@@ -31,13 +50,88 @@ export default function PostRegisterScreen() {
 
   const keywords: KeywordType[] = ['후기', '수선', '질문', '기타'];
 
-  const handleBackPress = () => {
-    navigation.goBack();
+  const requestPermissions = async (): Promise<boolean> => {
+    if (Platform.OS === 'android') {
+      try {
+        const apiLevel = Platform.Version;
+        if (apiLevel >= 33) {
+          // Android 13+ (API 33+)
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+          );
+          return granted === PermissionsAndroid.RESULTS.GRANTED;
+        } else {
+          // Android 12 and below
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          );
+          return granted === PermissionsAndroid.RESULTS.GRANTED;
+        }
+      } catch (error) {
+        console.error('Permission request error:', error);
+        return false;
+      }
+    }
+    // iOS permissions are handled automatically by the library
+    return true;
+  };
+
+  const loadPhotos = async () => {
+    try {
+      const hasPermission = await requestPermissions();
+      if (!hasPermission) {
+        Alert.alert('권한 필요', '갤러리 접근 권한이 필요합니다.');
+        return;
+      }
+
+      const {edges, page_info} = await CameraRoll.getPhotos({
+        first: 50,
+        assetType: 'Photos',
+        ...(Platform.OS === 'ios' && {groupTypes: 'All'}),
+      });
+
+      const photoNodes = edges.map((edge: any) => edge.node);
+      setPhotos(photoNodes);
+      setEndCursor(page_info.end_cursor || null);
+      setHasNextPage(page_info.has_next_page);
+      setShowGalleryModal(true);
+    } catch (error) {
+      console.error('Error loading photos:', error);
+      Alert.alert('오류', '사진을 불러오는 중 오류가 발생했습니다.');
+    }
+  };
+
+  const loadMorePhotos = async () => {
+    if (!hasNextPage || !endCursor) return;
+
+    try {
+      const {edges, page_info} = await CameraRoll.getPhotos({
+        first: 50,
+        after: endCursor,
+        assetType: 'Photos',
+        ...(Platform.OS === 'ios' && {groupTypes: 'All'}),
+      });
+
+      const photoNodes = edges.map((edge: any) => edge.node);
+      setPhotos(prev => [...prev, ...photoNodes]);
+      setEndCursor(page_info.end_cursor || null);
+      setHasNextPage(page_info.has_next_page);
+    } catch (error) {
+      console.error('Error loading more photos:', error);
+    }
   };
 
   const handleImageUpload = () => {
-    // TODO: 이미지 업로드 로직 구현
-    Alert.alert('이미지 업로드', '이미지 업로드 기능을 구현해주세요.');
+    loadPhotos();
+  };
+
+  const handleImageSelect = (uri: string) => {
+    setSelectedImage(uri);
+    setShowGalleryModal(false);
+  };
+
+  const handleImageRemove = () => {
+    setSelectedImage(null);
   };
 
   const handleTitleSubmit = () => {
@@ -97,10 +191,17 @@ export default function PostRegisterScreen() {
           <View style={styles.imageUploadSection}>
             <View style={styles.imageUploadContainer}>
               {selectedImage ? (
-                <Image
-                  source={{uri: selectedImage}}
-                  style={styles.uploadedImage}
-                />
+                <View style={styles.imageContainer}>
+                  <Image
+                    source={{uri: selectedImage}}
+                    style={styles.uploadedImage}
+                  />
+                  <TouchableOpacity
+                    style={styles.removeImageButton}
+                    onPress={handleImageRemove}>
+                    <Text style={styles.removeImageText}>×</Text>
+                  </TouchableOpacity>
+                </View>
               ) : (
                 <TouchableOpacity
                   style={styles.addImageButton}
@@ -196,6 +297,46 @@ export default function PostRegisterScreen() {
           <Text style={styles.submitButtonText}>등록</Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
+
+      {/* 갤러리 모달 */}
+      <Modal
+        visible={showGalleryModal}
+        animationType="slide"
+        onRequestClose={() => setShowGalleryModal(false)}
+        statusBarTranslucent={false}>
+        <View style={styles.modalWrapper}>
+          <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+          <View style={[styles.modalContainer, {paddingTop: insets.top}]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>사진 선택</Text>
+              <TouchableOpacity
+                onPress={() => setShowGalleryModal(false)}
+                style={styles.modalCloseButton}>
+                <Text style={styles.modalCloseText}>취소</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={photos}
+              numColumns={3}
+              keyExtractor={(item, index) => `${item.image.uri}-${index}`}
+              renderItem={({item}) => (
+                <TouchableOpacity
+                  style={styles.photoItem}
+                  onPress={() => handleImageSelect(item.image.uri)}>
+                  <Image
+                    source={{uri: item.image.uri}}
+                    style={styles.photoThumbnail}
+                  />
+                </TouchableOpacity>
+              )}
+              onEndReached={loadMorePhotos}
+              onEndReachedThreshold={0.5}
+              contentContainerStyle={styles.photoList}
+            />
+          </View>
+          <View style={{paddingBottom: insets.bottom}} />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -258,10 +399,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#9CA3AF',
     borderRadius: 2,
   },
+  imageContainer: {
+    position: 'relative',
+    width: 200,
+    height: 200,
+  },
   uploadedImage: {
     width: 200,
     height: 200,
     borderRadius: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeImageText: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 24,
+    fontFamily: 'Pretendard-Regular',
   },
   addImageButton: {
     flexDirection: 'row',
@@ -401,5 +564,51 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: 'Pretendard-Bold',
     fontWeight: '700',
+  },
+  modalWrapper: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 18,
+    color: '#000000',
+    fontFamily: 'Pretendard-Bold',
+    fontWeight: '700',
+  },
+  modalCloseButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  modalCloseText: {
+    fontSize: 16,
+    color: '#8A3FB8',
+    fontFamily: 'Pretendard-Regular',
+  },
+  photoList: {
+    padding: 2,
+  },
+  photoItem: {
+    flex: 1,
+    aspectRatio: 1,
+    margin: 2,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  photoThumbnail: {
+    width: '100%',
+    height: '100%',
   },
 });
