@@ -1,22 +1,26 @@
-export type ApplicationStatus = '진행중' | '종료' | '예정';
+export type ApplicationStatusLabel = '진행중' | '종료' | '예정';
 
-export type ApplicationHistory = {
+export type ApplicationSummary = {
   id: string;
+  eventId: string;
   title: string;
   description: string;
-  status: ApplicationStatus;
+  status: ApplicationStatusLabel;
   startDate: string;
   endDate: string;
   location: string;
-  address: string;
-  imageUrl: string;
+  address?: string;
+  thumbnailUrl?: string;
+};
+
+export type ApplicationOption = {
+  eventOptionId: number;
+  name: string;
+  type: string;
+};
+
+export type ApplicationDetail = ApplicationSummary & {
   usageGuide: string[];
   precautions: string[];
-  optionTrail: Array<{
-    eventOptionId: number;
-    name: string;
-    type: string;
-  }>;
-  qrToken: string;
-  expiresInSeconds: number;
+  optionTrail: ApplicationOption[];
 };

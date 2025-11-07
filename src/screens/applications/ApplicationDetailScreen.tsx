@@ -1,6 +1,15 @@
 import React from 'react';
 import {RouteProp, useRoute} from '@react-navigation/native';
-import {ScrollView, StyleSheet, View, Text as RNText} from 'react-native';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  Text as RNText,
+} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import QRCode from 'react-native-qrcode-svg';
 import DetailHeader from '../../components/common/DetailHeader';
@@ -8,6 +17,10 @@ import {ApplicationsStackParamList} from '../../app/navigation/types';
 import {Text} from '../../components/common/Text';
 import CalendarIcon from '../../assets/icons/eventCalendarIcon.svg';
 import LocationIcon from '../../assets/icons/eventLocationIcon.svg';
+import {
+  useApplicationDetail,
+  useApplicationQr,
+} from '../../hooks/useApplications';
 
 type DetailRouteProp = RouteProp<
   ApplicationsStackParamList,
@@ -15,11 +28,58 @@ type DetailRouteProp = RouteProp<
 >;
 
 export default function ApplicationDetailScreen() {
-  const {params} = useRoute<DetailRouteProp>();
-  const {application} = params;
+  const {
+    params: {applicationId, initialData},
+  } = useRoute<DetailRouteProp>();
 
-  const formattedPeriod = `${application.startDate} ~ ${application.endDate}`;
-  const timerLabel = formatSeconds(application.expiresInSeconds);
+  const {data, isLoading, isError, refetch} = useApplicationDetail(
+    applicationId,
+    initialData,
+  );
+
+  const {
+    qrToken,
+    secondsLeft,
+    isIssuing,
+    isExpired,
+    reissue,
+  } = useApplicationQr(applicationId);
+
+  const [showModal, setShowModal] = React.useState(false);
+
+  const timerLabel =
+    qrToken && secondsLeft >= 0 ? formatSeconds(secondsLeft) : '--:--';
+
+  const handleOpenModal = () => {
+    if (qrToken) {
+      setShowModal(true);
+    }
+  };
+
+  const handleCloseModal = () => setShowModal(false);
+
+  if (isLoading && !data) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#6B7280" />
+      </View>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <View style={styles.centered}>
+        <Text variant="bodyM" color="#6B7280" style={styles.stateText}>
+          신청 상세 정보를 불러오지 못했습니다.
+        </Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+          <Text variant="labelM" color="#FFFFFF">
+            다시 시도
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.safeArea}>
@@ -37,53 +97,98 @@ export default function ApplicationDetailScreen() {
               variant="headlineS"
               color="#FFFFFF"
               style={[styles.heroTitle, styles.heroTitleBold]}>
-              {application.title}
+              {data.title}
             </Text>
             <View style={styles.heroRow}>
               <CalendarIcon width={14} height={14} />
               <Text variant="labelM" color="#FFFFFF" style={styles.heroText}>
-                {formattedPeriod}
+                {formatPeriod(data.startDate, data.endDate)}
               </Text>
             </View>
             <View style={styles.heroRow}>
               <LocationIcon width={12} height={14} />
               <Text variant="labelM" color="#FFFFFF" style={styles.heroText}>
-                {application.location}
+                {data.location}
               </Text>
             </View>
-            <View style={styles.heroOptions}>
-              {application.optionTrail.map(option => (
-                <View key={option.eventOptionId} style={styles.heroOptionBadge}>
-                  <Text variant="labelS" color="#FFFFFF">
-                    {option.name}
-                  </Text>
-                </View>
-              ))}
-            </View>
+            {data.optionTrail.length > 0 && (
+              <View style={styles.heroOptions}>
+                {data.optionTrail.map(option => (
+                  <View
+                    key={option.eventOptionId}
+                    style={styles.heroOptionBadge}>
+                    <Text variant="labelS" color="#FFFFFF">
+                      {option.name}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
             <Text
               variant="bodyM"
               color="#F5F5F5"
               style={styles.heroDescription}
               numberOfLines={2}>
-              {application.description}
+              {data.description}
             </Text>
           </LinearGradient>
 
-            <View style={styles.body}>
-              <View style={styles.qrBlock}>
-                <View style={styles.qrWrapper}>
-                  <QRCode value={application.qrToken} size={132} />
-                </View>
-                <Text variant="labelL" color="#111827">
-                  {timerLabel}
-                </Text>
+          <View style={styles.body}>
+            <TouchableOpacity
+              style={styles.qrBlock}
+              activeOpacity={0.8}
+              onPress={handleOpenModal}
+              disabled={!qrToken}>
+              <View style={styles.qrWrapper}>
+                {qrToken ? (
+                  <QRCode value={qrToken} size={150} />
+                ) : (
+                  <ActivityIndicator size="small" color="#6B7280" />
+                )}
               </View>
+              <Text variant="labelL" color="#111827">
+                {timerLabel}
+              </Text>
+              <Text variant="bodyS" color="#6B7280" style={styles.qrHint}>
+                QR을 누르면 확대해서 볼 수 있어요
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.qrRefreshButton,
+                  isExpired && styles.qrRefreshButtonDanger,
+                ]}
+                onPress={reissue}
+                disabled={isIssuing}>
+                <Text variant="labelM" color="#FFFFFF">
+                  {isIssuing ? '발급 중...' : 'QR 새로고침'}
+                </Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
 
-              <Section title="이용 방법" items={application.usageGuide} />
-              <Section title="주의사항" items={application.precautions} />
-            </View>
+            <Section title="이용 방법" items={data.usageGuide} />
+            <Section title="주의사항" items={data.precautions} />
+          </View>
         </View>
       </ScrollView>
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showModal}
+        onRequestClose={handleCloseModal}>
+        <Pressable style={styles.modalBackdrop} onPress={handleCloseModal}>
+          <View style={styles.modalContent}>
+            {qrToken ? (
+              <QRCode value={qrToken} size={240} />
+            ) : (
+              <ActivityIndicator size="large" color="#6B7280" />
+            )}
+            <Text variant="bodyS" color="#6B7280" style={styles.modalHint}>
+              화면을 탭하면 닫힙니다
+            </Text>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -94,6 +199,9 @@ type SectionProps = {
 };
 
 function Section({title, items}: SectionProps) {
+  if (!items.length) {
+    return null;
+  }
   return (
     <View style={styles.section}>
       <Text
@@ -110,6 +218,21 @@ function Section({title, items}: SectionProps) {
       ))}
     </View>
   );
+}
+
+function formatPeriod(start: string, end: string) {
+  return `${formatKoreanDate(start)} ~ ${formatKoreanDate(end)}`;
+}
+
+function formatKoreanDate(value: string) {
+  const date = new Date(value);
+  if (isNaN(date.getTime())) {
+    return value;
+  }
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}년 ${month}월 ${day}일`;
 }
 
 function formatSeconds(value: number) {
@@ -190,8 +313,8 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   qrWrapper: {
-    width: 150,
-    height: 150,
+    width: 170,
+    height: 170,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
@@ -201,6 +324,19 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 6},
     shadowRadius: 9,
     elevation: 3,
+  },
+  qrHint: {
+    marginTop: -6,
+  },
+  qrRefreshButton: {
+    marginTop: 4,
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#06B0B7',
+  },
+  qrRefreshButtonDanger: {
+    backgroundColor: '#DC2626',
   },
   section: {
     marginBottom: 24,
@@ -230,4 +366,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 20,
   },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+  },
+  stateText: {
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#06B0B7',
+    borderRadius: 999,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 32,
+    paddingVertical: 28,
+    alignItems: 'center',
+  },
+  modalHint: {
+    marginTop: 12,
+  },
 });
+
