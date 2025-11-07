@@ -1,17 +1,8 @@
-export type RootStackParamList = {
-  Home: undefined;
-  ProductDetail: {
-    productId: string;
-    productName: string;
-  };
-  Settings: undefined;
-};
+import {ApplicationHistory} from '../screens/applications/types';
 
-export type MainStackParamList = {
-  Home: undefined;
-  ProductDetail: {
-    productId: string;
-    productName: string;
+export type ApplicationsStackParamList = {
+  ApplicationList: undefined;
+  ApplicationDetail: {
+    application: ApplicationHistory;
   };
-  Settings: undefined;
 };
