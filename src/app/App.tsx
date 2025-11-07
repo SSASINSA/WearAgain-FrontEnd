@@ -5,11 +5,13 @@
 
 import React from 'react';
 import RootNavigation from './navigation/RootNavigation';
-
+import {QueryClientProvider} from './providers/QueryClientProvider';
 
 function App() {
   return (
+    <QueryClientProvider>
       <RootNavigation />
+    </QueryClientProvider>
   );
 }
 
