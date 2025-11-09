@@ -4,6 +4,7 @@ import BottomTabNavigation from './BottomTabNavigation';
 import PostDetailScreen from '../../screens/community/PostDetailScreen';
 import PostRegisterScreen from '../../screens/community/PostRegisterScreen';
 import EventDetailScreen from '../../screens/event/EventDetailScreen';
+import GrowingScreen from '../../screens/growing/GrowingScreen';
 import StoreStack from './StoreNavigation';
 import ApplicationsNavigation from './ApplicationsNavigation';
 
@@ -16,6 +17,7 @@ export default function MainNavigation() {
       <Stack.Screen name="PostDetail" component={PostDetailScreen} />
       <Stack.Screen name="EventDetail" component={EventDetailScreen} />
       <Stack.Screen name="PostRegister" component={PostRegisterScreen} />
+      <Stack.Screen name="Growing" component={GrowingScreen} />
       <Stack.Screen
         name="ApplicationsStack"
         component={ApplicationsNavigation}
