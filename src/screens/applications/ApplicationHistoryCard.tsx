@@ -3,14 +3,17 @@ import {Image, StyleSheet, TouchableOpacity, View} from 'react-native';
 import {Text} from '../../components/common/Text';
 import CalendarIcon from '../../assets/icons/eventCalendarIcon.svg';
 import LocationIcon from '../../assets/icons/eventLocationIcon.svg';
-import {ApplicationHistory, ApplicationStatus} from './types';
+import {ApplicationSummary, ApplicationStatusLabel} from './types';
 
 type ApplicationHistoryCardProps = {
-  application: ApplicationHistory;
+  application: ApplicationSummary;
   onPress?: () => void;
 };
 
-const STATUS_THEME: Record<ApplicationStatus, {background: string; text: string}> = {
+const STATUS_THEME: Record<
+  ApplicationStatusLabel,
+  {background: string; text: string}
+> = {
   진행중: {
     background: '#FEE2E2',
     text: '#B91C1C',
@@ -39,11 +42,19 @@ export function ApplicationHistoryCard({
       accessibilityRole="button"
       accessibilityLabel={`${application.title} 신청 내역`}>
       <View style={styles.row}>
-        <Image
-          source={{uri: application.imageUrl}}
-          style={styles.thumbnail}
-          resizeMode="cover"
-        />
+        {application.thumbnailUrl ? (
+          <Image
+            source={{uri: application.thumbnailUrl}}
+            style={styles.thumbnail}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.thumbnail, styles.thumbnailPlaceholder]}>
+            <Text variant="headlineS" color="#FFFFFF" align="center">
+              {application.title.slice(0, 1)}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.content}>
           <View style={styles.headerRow}>
@@ -92,15 +103,17 @@ export function ApplicationHistoryCard({
               </Text>
             </View>
 
-            <View style={[styles.metaRow, styles.metaRowSpacing]}>
-              <View style={styles.metaIcon} />
-              <Text
-                variant="bodyM"
-                color="#9CA3AF"
-                style={[styles.metaText, styles.address]}>
-                {application.address}
-              </Text>
-            </View>
+            {application.address ? (
+              <View style={[styles.metaRow, styles.metaRowSpacing]}>
+                <View style={styles.metaIcon} />
+                <Text
+                  variant="bodyM"
+                  color="#9CA3AF"
+                  style={[styles.metaText, styles.address]}>
+                  {application.address}
+                </Text>
+              </View>
+            ) : null}
           </View>
         </View>
       </View>
@@ -128,6 +141,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#E5E7EB',
     marginRight: 16,
+  },
+  thumbnailPlaceholder: {
+    backgroundColor: '#06B0B7',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     flex: 1,

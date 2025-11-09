@@ -1,8 +1,9 @@
-import {ApplicationHistory} from '../screens/applications/types';
+import {ApplicationSummary} from '../screens/applications/types';
 
 export type ApplicationsStackParamList = {
   ApplicationList: undefined;
   ApplicationDetail: {
-    application: ApplicationHistory;
+    applicationId: string;
+    initialData?: ApplicationSummary;
   };
 };
