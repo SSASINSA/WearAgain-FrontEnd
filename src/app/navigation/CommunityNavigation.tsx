@@ -9,14 +9,29 @@ const Stack = createNativeStackNavigator();
 export default function CommunityNavigation() {
   return (
     <Stack.Navigator
-      screenOptions={({navigation}) => ({
-        header: () => (
-          <CommonHeader
-            onPressTicket={() => console.log('티켓 아이콘 클릭')}
-            onPressStore={() => navigation.getParent()?.navigate('Store')}
-          />
-        ),
-      })}>
+      screenOptions={({navigation}) => {
+        const handlePressApplication = () => {
+          const tabNavigation = navigation.getParent();
+          const rootNavigation = tabNavigation?.getParent();
+
+          if (rootNavigation) {
+            rootNavigation.navigate('ApplicationsStack');
+          } else if (tabNavigation) {
+            tabNavigation.navigate('Home', {screen: 'Applications'});
+          } else {
+            navigation.navigate('Applications');
+          }
+        };
+
+        return {
+          header: () => (
+            <CommonHeader
+              onPressTicket={handlePressApplication}
+              onPressStore={() => navigation.getParent()?.navigate('Store')}
+            />
+          ),
+        };
+      }}>
       <Stack.Screen name="Community" component={CommunityScreen} />
       <Stack.Screen name="CommunityDetail" component={PlaceholderScreen} />
     </Stack.Navigator>
