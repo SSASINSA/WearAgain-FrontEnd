@@ -21,6 +21,7 @@ interface EventCardProps {
   location: string;
   status: '예정' | '진행중' | '종료';
   imageUrl?: string;
+  imageSource?: any;
   onPress?: () => void;
 }
 
@@ -32,6 +33,7 @@ export function EventCard({
   location,
   status,
   imageUrl,
+  imageSource,
   onPress,
 }: EventCardProps) {
   const getStatusColor = (status: string) => {
@@ -50,9 +52,11 @@ export function EventCard({
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.imageContainer}>
-        {imageUrl && (
+        {imageSource ? (
+          <Image source={imageSource} style={styles.image} />
+        ) : imageUrl ? (
           <Image source={{uri: imageUrl}} style={styles.image} />
-        )}
+        ) : null}
         <View style={styles.statusContainer}>
           <View style={[styles.statusBadge, {backgroundColor: getStatusColor(status)}]}>
             <Text variant="bodyS" color="#FFFFFF" style={styles.statusText}>

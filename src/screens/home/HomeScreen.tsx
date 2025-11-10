@@ -47,28 +47,6 @@ export default function HomeScreen() {
     },
   ];
 
-  // 이벤트 데이터
-  const events = [
-    {
-      id: 1,
-      title: '👕아름다운X수선혁명랩(Lab)',
-      description: "'교환'과 '수선'으로 끝까지 입는 경험과 실천을 제공하는 지속 가능한 의생활 실험 공간",
-      image: '이미지 1',
-    },
-    {
-      id: 2,
-      title: '업사이클링 워크샵',
-      description: '헌 옷을 새롭게 변신시켜보세요',
-      image: '이미지 2',
-    },
-    {
-      id: 3,
-      title: '에코 패션 챌린지',
-      description: '30일간 지속가능한 패션 실천하기',
-      image: '이미지 3',
-    },
-  ];
-
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <View style={styles.view}>
@@ -79,7 +57,7 @@ export default function HomeScreen() {
         <BannerCarousel banners={banners} />
 
         {/* 진행 중인 이벤트 */}
-        <EventsSection events={events} />
+        <EventsSection />
       </View>
     </SafeAreaView>
   );

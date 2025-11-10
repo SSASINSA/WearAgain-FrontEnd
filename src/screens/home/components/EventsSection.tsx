@@ -1,19 +1,60 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Text as CustomText } from '../../../components/common/Text';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {Text as CustomText} from '../../../components/common/Text';
+import {useEventsList, EventSummary} from '../../../hooks/useEvents';
 
-interface Event {
-  id: number;
-  title: string;
-  description: string;
-  image: string;
-}
+const eventImages = [
+  require('../../../assets/images/events/event1.jpg'),
+  require('../../../assets/images/events/event2.jpg'),
+  require('../../../assets/images/events/event3.jpg'),
+  require('../../../assets/images/events/event4.jpeg'),
+];
 
-interface EventsSectionProps {
-  events: Event[];
-}
+export const EventsSection: React.FC = () => {
+  const navigation = useNavigation<any>();
+  const {data, isLoading} = useEventsList();
 
-export const EventsSection: React.FC<EventsSectionProps> = ({ events }) => {
+  const events =
+    data?.pages.flatMap((page: {events: EventSummary[]}) => page.events) ?? [];
+
+  const eventsWithImages = events.slice(0, 4).map((event, index) => ({
+    ...event,
+    imageSource: eventImages[index % eventImages.length],
+  }));
+
+  const handleEventPress = (event: EventSummary) => {
+    navigation.navigate('EventDetail', {
+      eventId: event.id,
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.eventsSection}>
+        <View style={styles.eventsHeader}>
+          <CustomText variant="headlineM" color="#1F2937">
+            진행 중인 이벤트
+          </CustomText>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#6B7280" />
+        </View>
+      </View>
+    );
+  }
+
+  if (eventsWithImages.length === 0) {
+    return null;
+  }
+
   return (
     <View style={styles.eventsSection}>
       <View style={styles.eventsHeader}>
@@ -22,28 +63,30 @@ export const EventsSection: React.FC<EventsSectionProps> = ({ events }) => {
         </CustomText>
       </View>
 
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.eventsScrollView}
-        contentContainerStyle={styles.eventsContainer}
-      >
-        {events.map((event) => (
-          <View key={event.id} style={styles.eventCard}>
+        contentContainerStyle={styles.eventsContainer}>
+        {eventsWithImages.map((event) => (
+          <TouchableOpacity
+            key={event.id}
+            style={styles.eventCard}
+            onPress={() => handleEventPress(event)}>
             <View style={styles.eventImage}>
-              <CustomText variant="bodyM" color="#FFFFFF" align="center">
-                {event.image}
-              </CustomText>
+              {event.imageSource && (
+                <Image source={event.imageSource} style={styles.image} />
+              )}
             </View>
             <View style={styles.eventContent}>
-              <CustomText variant="headlineS" color="#1F2937">
+              <CustomText variant="headlineS" color="#1F2937" numberOfLines={1}>
                 {event.title}
               </CustomText>
-              <CustomText variant="bodyM" color="#4B5563">
+              <CustomText variant="bodyM" color="#4B5563" numberOfLines={2}>
                 {event.description}
               </CustomText>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </View>
@@ -86,8 +129,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
-    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  loadingContainer: {
+    paddingVertical: 32,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   eventContent: {
     padding: 16,
