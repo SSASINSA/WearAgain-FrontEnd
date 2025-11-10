@@ -5,23 +5,31 @@ import {Text} from '../../components/common/Text';
 import BackIcon from '../../assets/icons/back.svg';
 
 interface StoreHeaderProps {
-  credit?: number; 
+  credit?: number;
+  showTitle?: boolean;
+  backgroundColor?: string;
 }
 
-export default function StoreHeader({credit = 1250}: StoreHeaderProps) {
+export default function StoreHeader({
+  credit = 1250,
+  showTitle = true,
+  backgroundColor = '#F2F2F2',
+}: StoreHeaderProps) {
   const navigation = useNavigation<any>();
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, {backgroundColor}]}>
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <BackIcon width={15.75} height={18} />
       </TouchableOpacity>
 
-      <View style={styles.titleWrap}>
-        <Text variant="headlineM" color="#111827" align="center">
-          상점
-        </Text>
-      </View>
+      {showTitle && (
+        <View style={styles.titleWrap}>
+          <Text variant="headlineM" color="#111827" align="center">
+            상점
+          </Text>
+        </View>
+      )}
 
       <View style={styles.creditPill}>
         <Text variant="bodyM" color="#FFFFFF" style={styles.creditC}>
@@ -38,7 +46,6 @@ export default function StoreHeader({credit = 1250}: StoreHeaderProps) {
 const styles = StyleSheet.create({
   header: {
     height: 55,
-    backgroundColor: '#F2F2F2',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
