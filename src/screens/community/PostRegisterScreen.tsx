@@ -138,14 +138,7 @@ export default function PostRegisterScreen() {
     contentInputRef.current?.focus();
     // 약간의 딜레이 후 스크롤 이동
     setTimeout(() => {
-      scrollViewRef.current?.scrollTo({y: 300, animated: true});
-    }, 100);
-  };
-
-  const handleContentFocus = () => {
-    // 내용 입력 필드로 포커스 이동할 때 스크롤
-    setTimeout(() => {
-      scrollViewRef.current?.scrollTo({y: 350, animated: true});
+      scrollViewRef.current?.scrollTo({y: 100, animated: true});
     }, 100);
   };
 
@@ -159,18 +152,12 @@ export default function PostRegisterScreen() {
   };
 
   const handleSubmit = () => {
-    if (content.length < 10) {
-      Alert.alert('오류', '내용을 최소 10자 이상 입력해주세요.');
-      return;
-    }
-
     // TODO: 게시글 등록 API 호출
     Alert.alert('성공', '게시글이 등록되었습니다.');
     navigation.goBack();
   };
 
-  const isSubmitEnabled =
-    title.length >= 0 && content.length >= 10 && selectedKeyword !== null;
+  const isSubmitEnabled = title.length >= 0 && selectedKeyword !== null;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -187,35 +174,9 @@ export default function PostRegisterScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollViewContent}
           keyboardShouldPersistTaps="handled">
-          {/* 이미지 업로드 영역 */}
-          <View style={styles.imageUploadSection}>
-            <View style={styles.imageUploadContainer}>
-              {selectedImage ? (
-                <View style={styles.imageContainer}>
-                  <Image
-                    source={{uri: selectedImage}}
-                    style={styles.uploadedImage}
-                  />
-                  <TouchableOpacity
-                    style={styles.removeImageButton}
-                    onPress={handleImageRemove}>
-                    <Text style={styles.removeImageText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.addImageButton}
-                  onPress={handleImageUpload}>
-                  <PlusIcon width={14} height={14} color="#374151" />
-                  <Text style={styles.addImageText}>사진 추가</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
           {/* 제목 입력 영역 */}
           <View style={styles.titleSection}>
-            <Text style={styles.sectionLabel}>제목</Text>
+            <Text variant="headlineL">제목</Text>
             <View style={styles.titleInputContainer}>
               <TextInput
                 ref={titleInputRef}
@@ -234,32 +195,9 @@ export default function PostRegisterScreen() {
             </View>
           </View>
 
-          {/* 내용 입력 영역 */}
-          <View style={styles.contentSection}>
-            <Text style={styles.sectionLabel}>내용</Text>
-            <View style={styles.contentInputContainer}>
-              <TextInput
-                ref={contentInputRef}
-                style={styles.contentInput}
-                placeholder="내용을 입력하세요..."
-                placeholderTextColor="#adaebc"
-                value={content}
-                onChangeText={setContent}
-                multiline
-                maxLength={500}
-                onFocus={handleContentFocus}
-                scrollEnabled={true}
-              />
-            </View>
-            <View style={styles.inputHelperContent}>
-              <Text style={styles.helperText}>최소 10자 이상 입력해주세요</Text>
-              <Text style={styles.characterCount}>{content.length}/500</Text>
-            </View>
-          </View>
-
           {/* 키워드 선택 영역 */}
           <View style={styles.keywordSection}>
-            <Text style={styles.sectionLabel}>키워드 선택</Text>
+            <Text variant="headlineM">키워드 선택</Text>
             <View style={styles.keywordContainer}>
               {keywords.map(keyword => (
                 <TouchableOpacity
@@ -282,6 +220,57 @@ export default function PostRegisterScreen() {
                   </Text>
                 </TouchableOpacity>
               ))}
+            </View>
+          </View>
+
+          {/* 이미지와 내용 영역 (가로 배치) */}
+          <View style={styles.imageContentRow}>
+            {/* 이미지 업로드 영역 */}
+            <View style={styles.imageUploadSection}>
+              {selectedImage ? (
+                <View style={styles.imageContainer}>
+                  <Image
+                    source={{uri: selectedImage}}
+                    style={styles.uploadedImage}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    style={styles.removeImageButton}
+                    onPress={handleImageRemove}
+                    activeOpacity={0.8}>
+                    <View style={styles.removeImageIcon}>
+                      <Text style={styles.removeImageText}>×</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.addImageButton}
+                  onPress={handleImageUpload}
+                  activeOpacity={0.6}>
+                  <PlusIcon width={24} height={24} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* 내용 입력 영역 */}
+            <View style={styles.contentSection}>
+              <View style={styles.contentInputContainer}>
+                <TextInput
+                  ref={contentInputRef}
+                  style={styles.contentInput}
+                  placeholder="내용을 입력하세요..."
+                  placeholderTextColor="#adaebc"
+                  value={content}
+                  onChangeText={setContent}
+                  multiline
+                  maxLength={500}
+                  scrollEnabled={true}
+                />
+              </View>
+              <View style={styles.inputHelperContent}>
+                <Text style={styles.characterCount}>{content.length}/500</Text>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -369,112 +358,72 @@ const styles = StyleSheet.create({
   scrollViewContent: {
     paddingBottom: 100,
   },
-  imageUploadSection: {
+  imageContentRow: {
+    flexDirection: 'row',
     paddingHorizontal: 16,
     paddingTop: 24,
-    alignItems: 'center',
+    gap: 16,
   },
-  imageUploadContainer: {
-    width: 200,
-    height: 200,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#6B7280',
-    backgroundColor: '#F2F2F2',
-    justifyContent: 'center',
+  imageUploadSection: {
     alignItems: 'center',
-  },
-  imagePlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#E5E7EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageIcon: {
-    width: 24,
-    height: 24,
-    backgroundColor: '#9CA3AF',
-    borderRadius: 2,
   },
   imageContainer: {
     position: 'relative',
-    width: 200,
-    height: 200,
+    width: 133,
+    height: 133,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   uploadedImage: {
-    width: 200,
-    height: 200,
-    borderRadius: 8,
+    width: '100%',
+    height: '100%',
   },
   removeImageButton: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    top: 4,
+    right: 4,
+    zIndex: 10,
+  },
+  removeImageIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   removeImageText: {
     color: '#FFFFFF',
-    fontSize: 24,
-    lineHeight: 24,
-    fontFamily: 'Pretendard-Regular',
+    fontSize: 14,
+    lineHeight: 14,
+    fontFamily: 'Pretendard-Bold',
+    fontWeight: '700',
   },
   addImageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    width: 133,
+    height: 133,
     borderRadius: 8,
-    paddingHorizontal: 17,
-    paddingVertical: 11,
-  },
-  addImageIcon: {
-    width: 12,
-    height: 14,
-    backgroundColor: '#9CA3AF',
-    borderRadius: 1,
-    marginRight: 8,
-  },
-  addImageText: {
-    fontSize: 14,
-    marginLeft: 4,
-    color: '#374151',
-    fontFamily: 'Pretendard-Regular',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#D1D5DB',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   titleSection: {
     paddingHorizontal: 16,
     paddingTop: 24,
   },
   contentSection: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
+    flex: 1,
   },
   keywordSection: {
     paddingHorizontal: 16,
     paddingTop: 24,
   },
-  sectionLabel: {
-    fontSize: 14,
-    color: '#374151',
-    fontFamily: 'Pretendard-Regular',
-    marginBottom: 8,
-  },
   titleInputContainer: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
     height: 50,
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
   },
   titleInput: {
     fontSize: 16,
@@ -483,13 +432,9 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   contentInputContainer: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    height: 170,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    minHeight: 170,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
   contentInput: {
     fontSize: 16,
@@ -497,7 +442,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Pretendard-Regular',
     padding: 0,
     textAlignVertical: 'top',
-    flex: 1,
+    minHeight: 170,
   },
   inputHelperTitle: {
     flexDirection: 'row',
@@ -508,14 +453,9 @@ const styles = StyleSheet.create({
 
   inputHelperContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     marginTop: 8,
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontFamily: 'Pretendard-Regular',
   },
   characterCount: {
     fontSize: 12,
@@ -526,6 +466,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    marginTop: 12,
   },
   keywordButton: {
     backgroundColor: '#CED4DA',
