@@ -16,6 +16,7 @@ interface BaseModalProps {
   confirmButtonText: string;
   children: React.ReactNode;
   height?: number;
+  confirmDisabled?: boolean;
 }
 
 export default function BaseModal({
@@ -26,6 +27,7 @@ export default function BaseModal({
   confirmButtonText,
   children,
   height = 350,
+  confirmDisabled = false,
 }: BaseModalProps) {
   return (
     <Modal
@@ -57,8 +59,12 @@ export default function BaseModal({
 
         <View style={styles.modalFooter}>
           <TouchableOpacity 
-            style={styles.applyButton}
-            onPress={onConfirm}>
+            style={[
+              styles.applyButton,
+              confirmDisabled && styles.applyButtonDisabled,
+            ]}
+            onPress={onConfirm}
+            disabled={confirmDisabled}>
             <Text variant="headlineM" color="#FFFFFF" style={styles.applyButtonText}>
               {confirmButtonText}
             </Text>
@@ -119,6 +125,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  applyButtonDisabled: {
+    backgroundColor: '#D1D5DB',
+    opacity: 0.6,
   },
   applyButtonText: {
     fontSize: 18,

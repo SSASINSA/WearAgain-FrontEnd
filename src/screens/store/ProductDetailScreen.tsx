@@ -26,10 +26,10 @@ export default function ProductDetailScreen() {
   // TODO: 실제로는 productId를 기반으로 API에서 데이터를 가져와야 함
   const product: ProductDetailData = {
     id: productId,
-    name: '업사이클링 지갑',
-    price: 2500,
-    description: `이 지갑은 업사이클링 과정을 거쳐 제작되었습니다. 소재는 100% 재활용 가능한 원료로, 환경 보호에 기여합니다.`,
-    image: require('../../assets/images/login/login-illustration.png'),
+    name: '패션 마스크',
+    price: 150,
+    description: `이 마스크는 업사이클링 과정을 거쳐 제작되었습니다. 소재는 100% 재활용 가능한 원료로, 환경 보호에 기여합니다.`,
+    image: require('../../assets/images/store/fashionmask.png'),
   };
 
   const handleExchange = () => {

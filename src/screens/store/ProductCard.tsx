@@ -1,5 +1,5 @@
 import React, {memo} from 'react';
-import {View, Pressable, ImageSourcePropType, StyleSheet} from 'react-native';
+import {View, Pressable, ImageSourcePropType, StyleSheet, Image} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {Text} from '../../components/common/Text';
 
@@ -20,10 +20,12 @@ function ProductCardBase({product}: Props) {
       onPress={() => navigation.navigate('ProductDetail', {productId: product.id})}
       style={styles.card}
     >
-      <View style={styles.imagePlaceholder}>
-        <Text variant="bodyM" color="#FFFFFF" align="center">
-          {String(product.image)}
-        </Text>
+      <View style={styles.imageContainer}>
+        <Image
+          source={product.image}
+          style={styles.image}
+          resizeMode="cover"
+        />
       </View>
       <View style={styles.infoArea}>
         <Text variant="bodyM" color="#111827" numberOfLines={1}>
@@ -50,13 +52,16 @@ const styles = StyleSheet.create({
     height: 231.5,
     overflow: 'hidden',
   },
-  imagePlaceholder: {
+  imageContainer: {
     height: 162.5,
     backgroundColor: '#E5E7EB',
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
   },
   infoArea: {
     paddingHorizontal: 12,

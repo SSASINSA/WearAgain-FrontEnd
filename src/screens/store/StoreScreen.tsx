@@ -11,25 +11,25 @@ export default function StoreScreen() {
         id: '1',
         name: '패션 마스크',
         price: 150,
-        image: '이미지 1',
+        image: require('../../assets/images/store/fashionmask.png'),
       },
       {
         id: '2',
         name: '카드 지갑',
         price: 150,
-        image: '이미지 2',
+        image: require('../../assets/images/store/fashionmask.png'),
       },
       {
         id: '3',
         name: '에코백',
         price: 150,
-        image: '이미지 3',
+        image: require('../../assets/images/store/fashionmask.png'),
       },
       {
         id: '4',
         name: '앞치마',
         price: 200,
-        image: '이미지 4',
+        image: require('../../assets/images/store/fashionmask.png'),
       },
     ];
 
