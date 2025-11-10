@@ -2,11 +2,11 @@ import React from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Image,
   Dimensions,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import {Text} from '../../components/common/Text';
@@ -48,8 +48,7 @@ export default function GrowingScreen() {
 
   React.useEffect(() => {
     navigation.setOptions({
-      headerShown: true,
-      header: () => <DetailHeader />,
+      headerShown: false,
     } as any);
   }, [navigation]);
 
@@ -74,151 +73,169 @@ export default function GrowingScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={['#FAF5FF', '#ECFEFF']}
-      start={{x: 0, y: 0}}
-      end={{x: 0, y: 1}}
-      style={styles.container}
-    >
-      <View style={styles.container}>
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* 환경 통계 카드 */}
-          <View style={styles.statsCard}>
-            <View style={styles.statsContent}>
-              {/* CO2 절감 */}
-              <View style={styles.statItem}>
-                <Image source={imgCo2Icon} style={styles.statIcon} />
-                <Text variant="bodyS" color="#888888" align="center" style={styles.statLabel}>
-                  CO2 절감
-                </Text>
-                <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
-                  20kg
-                </Text>
-              </View>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <LinearGradient
+        colors={['#FAF5FF', '#ECFEFF']}
+        start={{x: 0, y: 0}}
+        end={{x: 0, y: 1}}
+        style={styles.container}
+      >
+        <DetailHeader useTopInset={false} />
+        <View style={styles.contentContainer}>
+          {/* 상단 콘텐츠 영역 */}
+          <View style={styles.topContent}>
+            {/* 환경 통계 카드 */}
+            <View style={styles.statsCard}>
+              <View style={styles.statsContent}>
+                {/* CO2 절감 */}
+                <View style={styles.statItem}>
+                  <Image source={imgCo2Icon} style={styles.statIcon} />
+                  <Text variant="bodyS" color="#888888" align="center" style={styles.statLabel}>
+                    CO2 절감
+                  </Text>
+                  <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
+                    20kg
+                  </Text>
+                </View>
 
-              {/* 물 절감 */}
-              <View style={styles.statItem}>
-                <Image source={imgWaterIcon} style={styles.statIcon} />
-                <Text variant="bodyS" color="#888888" align="center" style={styles.statLabel}>
-                  물 절감
-                </Text>
-                <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
-                  35.4L
-                </Text>
-              </View>
+                {/* 물 절감 */}
+                <View style={styles.statItem}>
+                  <Image source={imgWaterIcon} style={styles.statIcon} />
+                  <Text variant="bodyS" color="#888888" align="center" style={styles.statLabel}>
+                    물 절감
+                  </Text>
+                  <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
+                    35.4L
+                  </Text>
+                </View>
 
-              {/* 에너지 절감 */}
-              <View style={styles.statItem}>
-                <Image source={imgEnergyIcon} style={styles.statIcon} />
-                <Text variant="bodyS" color="#888888" align="center" style={styles.statLabel}>
-                  에너지 절감
-                </Text>
-                <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
-                  12.6KWh
-                </Text>
-              </View>
-            </View>
-          </View>
-
-        {/* 캐릭터 대화 영역 */}
-        <View style={styles.dialogueCard}>
-          <Text variant="bodyL" color="#374151" align="center" style={styles.dialogueText}>
-            {characterDialogues[currentCharacter as keyof typeof characterDialogues]}
-          </Text>
-        </View>
-
-          {/* 캐릭터 영역 */}
-          <TouchableOpacity 
-            onPress={handleCharacterPress} 
-            style={styles.characterSection}
-            activeOpacity={1}
-          >
-            {/* 화살표 */}
-            <View style={styles.arrowContainer}>
-              <Image source={{uri: imgPolygon1}} style={styles.arrowIcon} />
-            </View>
-
-            {/* 캐릭터 이미지 */}
-            <View style={styles.characterImageContainer}>
-              <Image source={characterImages[currentCharacter as keyof typeof characterImages]} style={styles.characterImage} />
-            </View>
-
-            {/* 캐릭터 이름 배경 */}
-            <View style={styles.characterNameContainer}>
-              <Image source={{uri: imgEllipse1}} style={styles.characterNameBackground} />
-            </View>
-          </TouchableOpacity>
-
-          {/* 랭킹 버튼 */}
-          <View style={styles.actionButtons}>
-            <View style={styles.actionButtonContainer}>
-              <TouchableOpacity onPress={handleRankingPress} style={styles.actionButton}>
-                <RankingIcon width={27} height={27} color="#FFFFFF" />
-              </TouchableOpacity>
-              <Text variant="bodyM" color="#374151" align="center" style={styles.dialogueText}>
-              랭킹
-              </Text>
-            </View>
-          </View>
-
-          {/* 레벨 진행률 바 */}
-          <View style={styles.levelCard}>
-            <View style={styles.levelContent}>
-              <View style={styles.levelTextContainer}>
-                <Text variant="bodyM" color="#6B7280">다음 레벨까지</Text>
-                <Text variant="bodyM" color="#06b0b7">75/100 EXP</Text>
-              </View>
-              
-              <View style={styles.progressBarWrapper}>
-                <View style={styles.progressBarContainer}>
-                  <View style={styles.progressBarBackground}>
-                    <LinearGradient
-                      colors={['#06b0b7', '#08d4dc']}
-                      start={{x: 0, y: 0}}
-                      end={{x: 1, y: 0}}
-                      style={styles.progressBarFill}
-                    />
-                  </View>
+                {/* 에너지 절감 */}
+                <View style={styles.statItem}>
+                  <Image source={imgEnergyIcon} style={styles.statIcon} />
+                  <Text variant="bodyS" color="#888888" align="center" style={styles.statLabel}>
+                    에너지 절감
+                  </Text>
+                  <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
+                    12.6KWh
+                  </Text>
                 </View>
               </View>
-
-              {/* 레벨 배지 */}
-              <LinearGradient
-                colors={['#06b0b7', '#08d4dc']}
-                start={{x: 0, y: 0}}
-                end={{x: 1, y: 0}}
-                style={styles.levelBadge}
-              >
-                <Text variant="bodyL" color="#FFFFFF" weight="bold">Lv.15</Text>
-              </LinearGradient>
             </View>
+
+            {/* 캐릭터 대화 영역 */}
+            <View style={styles.dialogueCard}>
+              <Text variant="bodyL" color="#374151" align="center" style={styles.dialogueText}>
+                {characterDialogues[currentCharacter as keyof typeof characterDialogues]}
+              </Text>
+            </View>
+
+            {/* 캐릭터 영역 */}
+            <TouchableOpacity 
+              onPress={handleCharacterPress} 
+              style={styles.characterSection}
+              activeOpacity={1}
+            >
+              {/* 화살표 */}
+              <View style={styles.arrowContainer}>
+                <Image source={{uri: imgPolygon1}} style={styles.arrowIcon} />
+              </View>
+
+              {/* 캐릭터 이미지 */}
+              <View style={styles.characterImageContainer}>
+                <Image source={characterImages[currentCharacter as keyof typeof characterImages]} style={styles.characterImage} />
+              </View>
+
+              {/* 캐릭터 이름 배경 */}
+              <View style={styles.characterNameContainer}>
+                <Image source={{uri: imgEllipse1}} style={styles.characterNameBackground} />
+              </View>
+            </TouchableOpacity>
           </View>
 
-          {/* 수선하기 버튼 */}
-          <TouchableOpacity onPress={handleRepairPress} style={styles.repairButton}>
-            <LinearGradient
-              colors={['#8a3fb8', '#8a3fb8']}
-              start={{x: 0, y: 0}}
-              end={{x: 1, y: 0}}
-              style={styles.repairButtonGradient}
-            >
-              <ScissorsIcon width={16} height={16} color="#FFFFFF" />
-              <Text variant="bodyL" color="#FFFFFF" weight="bold">수선하기</Text>
-              <Text variant="bodyL" color="#FFFFFF" weight="bold">5</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-    </LinearGradient>
+          {/* 하단 버튼 영역 */}
+          <View style={styles.bottomSection}>
+            {/* 랭킹 버튼 */}
+            <View style={styles.actionButtons}>
+              <View style={styles.actionButtonContainer}>
+                <TouchableOpacity onPress={handleRankingPress} style={styles.actionButton}>
+                  <RankingIcon width={27} height={27} color="#FFFFFF" />
+                </TouchableOpacity>
+                <Text variant="bodyM" color="#374151" align="center" style={styles.actionButtonLabel}>
+                  랭킹
+                </Text>
+              </View>
+            </View>
+
+            {/* 레벨 진행률 바 */}
+            <View style={styles.levelCard}>
+              <View style={styles.levelContent}>
+                <View style={styles.levelTextContainer}>
+                  <Text variant="bodyM" color="#6B7280">다음 레벨까지</Text>
+                  <Text variant="bodyM" color="#06b0b7">75/100 EXP</Text>
+                </View>
+                
+                <View style={styles.progressBarWrapper}>
+                  <View style={styles.progressBarContainer}>
+                    <View style={styles.progressBarBackground}>
+                      <LinearGradient
+                        colors={['#06b0b7', '#08d4dc']}
+                        start={{x: 0, y: 0}}
+                        end={{x: 1, y: 0}}
+                        style={styles.progressBarFill}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                {/* 레벨 배지 */}
+                <LinearGradient
+                  colors={['#06b0b7', '#08d4dc']}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 0}}
+                  style={styles.levelBadge}
+                >
+                  <Text variant="bodyL" color="#FFFFFF" weight="bold">Lv.15</Text>
+                </LinearGradient>
+              </View>
+            </View>
+
+            {/* 수선하기 버튼 */}
+            <TouchableOpacity onPress={handleRepairPress} style={styles.repairButton}>
+              <LinearGradient
+                colors={['#8a3fb8', '#8a3fb8']}
+                start={{x: 0, y: 0}}
+                end={{x: 1, y: 0}}
+                style={styles.repairButtonGradient}
+              >
+                <ScissorsIcon width={16} height={16} color="#FFFFFF" />
+                <Text variant="bodyL" color="#FFFFFF" weight="bold">수선하기</Text>
+                <Text variant="bodyL" color="#FFFFFF" weight="bold">5</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
   container: {
     flex: 1,
   },
-  scrollView: {
+  contentContainer: {
     flex: 1,
+    justifyContent: 'space-between',
+  },
+  topContent: {
+    flex: 1,
+  },
+  bottomSection: {
+    paddingBottom: 16,
   },
   statsCard: {
     backgroundColor: '#FFFFFF',
@@ -301,8 +318,8 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     alignItems: 'flex-end',
-    marginTop: 24,
     marginRight: 24,
+    marginBottom: 8,
   },
   actionButtonContainer: {
     alignItems: 'center',
@@ -314,13 +331,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#06b0b7',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
+  },
+  actionButtonLabel: {
+    fontSize: 12,
   },
   levelCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginHorizontal: 24,
-    marginTop: 12,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#F3F4F6',
     position: 'relative',
@@ -328,7 +348,7 @@ const styles = StyleSheet.create({
   },
   levelContent: {
     position: 'relative',
-    paddingVertical: 20,
+    paddingVertical: 16,
     paddingHorizontal: 21,
   },
   levelTextContainer: {
@@ -369,8 +389,6 @@ const styles = StyleSheet.create({
   },
   repairButton: {
     marginHorizontal: 24,
-    marginTop: 24,
-    marginBottom: 32,
   },
   repairButtonGradient: {
     flexDirection: 'row',
