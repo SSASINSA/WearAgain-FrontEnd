@@ -5,71 +5,116 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  TextInput,
 } from 'react-native';
 import {useRoute, RouteProp} from '@react-navigation/native';
 import {Text} from '../../components/common/Text';
 import EventDetailContent from './EventDetailContent';
 import BaseModal from '../../components/common/BaseModal';
 import DetailHeader from '../../components/common/DetailHeader';
+import {useEventDetail, useApplyEvent} from '../../hooks/useEvents';
 
-export interface EventDetailProps {
-  id: string;
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  address?: string;
-  time?: string;
-  status: '예정' | '진행중' | '종료';
-  imageUrl?: string;
-  tags?: string[];
-  category?: string;
-}
-
-export type EventStackParamList = {
-  EventList: undefined;
-  EventDetail: {
-    event: EventDetailProps;
-  };
-};
+const eventImages = [
+  require('../../assets/images/events/event1.jpg'),
+  require('../../assets/images/events/event2.jpg'),
+  require('../../assets/images/events/event3.jpg'),
+  require('../../assets/images/events/event4.jpeg'),
+];
 
 export type EventDetailParamList = {
   EventDetail: {
-    event: EventDetailProps;
+    eventId: string;
   };
 };
 
-export interface EventApplicationOptions {
-  participants?: string;
-  time?: string;
-}
-
-type EventDetailRouteProp = RouteProp<
-  EventDetailParamList,
-  'EventDetail'
->;
+type EventDetailRouteProp = RouteProp<EventDetailParamList, 'EventDetail'>;
 
 export default function EventDetailScreen() {
   const route = useRoute<EventDetailRouteProp>();
-  const {event} = route.params;
+  const {eventId} = route.params;
+  const {data: event, isLoading, isError} = useEventDetail(eventId);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedParticipants, setSelectedParticipants] = useState<string>('');
-  const [selectedTime, setSelectedTime] = useState<string>('');
-  const [isParticipantsDropdownOpen, setIsParticipantsDropdownOpen] = useState(false);
-  const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [memo, setMemo] = useState('');
+  const [isOptionDropdownOpen, setIsOptionDropdownOpen] = useState(false);
+  const applyEventMutation = useApplyEvent();
 
   const handleApplicationConfirm = () => {
-    const options: EventApplicationOptions = {
-      participants: selectedParticipants,
-      time: selectedTime,
-    };
-    console.log('선택된 옵션:', options);
-    setIsModalVisible(false);
-    setSelectedParticipants('');
-    setSelectedTime('');
-    setIsParticipantsDropdownOpen(false);
-    setIsTimeDropdownOpen(false);
+    if (!event || !selectedOption) {
+      Alert.alert('오류', '옵션을 선택해주세요.');
+      return;
+    }
+
+    const eventIdNumber = parseInt(eventId, 10);
+    if (isNaN(eventIdNumber)) {
+      Alert.alert('오류', '잘못된 이벤트 ID입니다.');
+      return;
+    }
+
+    applyEventMutation.mutate(
+      {
+        eventId: eventIdNumber,
+        body: {
+          optionId: selectedOption,
+          memo: memo.trim() || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          Alert.alert('신청 완료', '행사 신청이 완료되었습니다.');
+          setIsModalVisible(false);
+          setSelectedOption(null);
+          setMemo('');
+          setIsOptionDropdownOpen(false);
+        },
+        onError: (error: any) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            '신청 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+          Alert.alert('신청 실패', errorMessage);
+        },
+      },
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <DetailHeader />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6B7280" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isError || !event) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <DetailHeader />
+        <View style={styles.errorContainer}>
+          <Text variant="bodyM" color="#6B7280">
+            이벤트 정보를 불러오지 못했습니다.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const availableOptions = event.options.filter(
+    option => option.remainingCount > 0,
+  );
+
+  const eventIndex = parseInt(eventId) - 1;
+  const eventImageSource = eventImages[eventIndex % eventImages.length];
+
+  const getButtonText = () => {
+    if (availableOptions.length === 0) {
+      return '신청 마감';
+    }
+    return '신청하기';
   };
 
   return (
@@ -77,15 +122,22 @@ export default function EventDetailScreen() {
       <DetailHeader />
       
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <EventDetailContent event={event} />
+        <EventDetailContent event={event} imageSource={eventImageSource} />
       </ScrollView>
 
       <View style={styles.bottomContainer}>
         <TouchableOpacity 
-          style={styles.applyButton}
-          onPress={() => setIsModalVisible(true)}>
-          <Text variant="headlineM" color="#FFFFFF" style={styles.applyButtonText}>
-            신청하기
+          style={[
+            styles.applyButton,
+            availableOptions.length === 0 && styles.applyButtonDisabled,
+          ]}
+          onPress={() => setIsModalVisible(true)}
+          disabled={availableOptions.length === 0}>
+          <Text 
+            variant="headlineM" 
+            color={availableOptions.length === 0 ? "#9CA3AF" : "#FFFFFF"} 
+            style={styles.applyButtonText}>
+            {getButtonText()}
           </Text>
         </TouchableOpacity>
       </View>
@@ -94,97 +146,86 @@ export default function EventDetailScreen() {
         isVisible={isModalVisible}
         onClose={() => {
           setIsModalVisible(false);
-          setSelectedParticipants('');
-          setSelectedTime('');
-          setIsParticipantsDropdownOpen(false);
-          setIsTimeDropdownOpen(false);
+          setSelectedOption(null);
+          setMemo('');
+          setIsOptionDropdownOpen(false);
         }}
         onConfirm={handleApplicationConfirm}
         title="신청 옵션 선택"
         confirmButtonText="신청 완료"
-        height={450}>
-        {/* 참가 인원 선택 */}
+        height={500}
+        confirmDisabled={!selectedOption || applyEventMutation.isPending}>
+        {/* 옵션 선택 */}
         <View style={styles.optionSection}>
           <Text variant="bodyL" color="#111827" style={styles.optionTitle}>
-            참가 인원
+            옵션 선택
           </Text>
           <View style={styles.dropdownContainer}>
             <TouchableOpacity
               style={styles.dropdownButton}
-              onPress={() => setIsParticipantsDropdownOpen(!isParticipantsDropdownOpen)}>
-              <Text variant="bodyM" color={selectedParticipants ? "#111827" : "#6b7280"} style={styles.dropdownButtonText}>
-                {selectedParticipants || '인원을 선택해주세요'}
+              onPress={() => setIsOptionDropdownOpen(!isOptionDropdownOpen)}>
+              <Text variant="bodyM" color={selectedOption ? "#111827" : "#6b7280"} style={styles.dropdownButtonText}>
+                {selectedOption 
+                  ? event.options.find(opt => opt.optionId === selectedOption)?.name || '옵션을 선택해주세요'
+                  : '옵션을 선택해주세요'}
               </Text>
               <Text style={styles.dropdownArrow}>
-                {isParticipantsDropdownOpen ? '▲' : '▼'}
+                {isOptionDropdownOpen ? '▲' : '▼'}
               </Text>
             </TouchableOpacity>
             
-            {isParticipantsDropdownOpen && (
+            {isOptionDropdownOpen && (
               <View style={styles.dropdownList}>
                 <ScrollView 
                   style={styles.dropdownScrollView}
                   showsVerticalScrollIndicator={true}
                   nestedScrollEnabled={true}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
+                  {availableOptions.map((option) => (
                     <TouchableOpacity
-                      key={count}
+                      key={option.optionId}
                       style={styles.dropdownItem}
                       onPress={() => {
-                        setSelectedParticipants(`${count}명`);
-                        setIsParticipantsDropdownOpen(false);
+                        setSelectedOption(option.optionId);
+                        setIsOptionDropdownOpen(false);
                       }}>
-                      <Text variant="bodyM" color="#111827" style={styles.dropdownItemText}>
-                        {count}명
-                      </Text>
+                      <View style={styles.optionItemContent}>
+                        <Text variant="bodyM" color="#111827" style={styles.dropdownItemText}>
+                          {option.name}
+                        </Text>
+                        <Text variant="bodyS" color="#6b7280" style={styles.optionCapacity}>
+                          잔여: {option.remainingCount}/{option.capacity}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   ))}
+                  {availableOptions.length === 0 && (
+                    <View style={styles.dropdownItem}>
+                      <Text variant="bodyM" color="#6b7280" style={styles.dropdownItemText}>
+                        선택 가능한 옵션이 없습니다.
+                      </Text>
+                    </View>
+                  )}
                 </ScrollView>
               </View>
             )}
           </View>
         </View>
 
-        {/* 참가 시간 선택 */}
-        <View style={styles.optionSection}>
-          <Text variant="bodyL" color="#111827" style={styles.optionTitle}>
-            참가 시간
+        {/* 메모 입력 */}
+        <View style={styles.memoSection}>
+          <Text variant="bodyL" color="#111827" style={styles.memoTitle}>
+            메모 (선택사항)
           </Text>
-          <View style={styles.dropdownContainer}>
-            <TouchableOpacity
-              style={styles.dropdownButton}
-              onPress={() => setIsTimeDropdownOpen(!isTimeDropdownOpen)}>
-              <Text variant="bodyM" color={selectedTime ? "#111827" : "#6b7280"} style={styles.dropdownButtonText}>
-                {selectedTime || '시간을 선택해주세요'}
-              </Text>
-              <Text style={styles.dropdownArrow}>
-                {isTimeDropdownOpen ? '▲' : '▼'}
-              </Text>
-            </TouchableOpacity>
-            
-            {isTimeDropdownOpen && (
-              <View style={styles.dropdownList}>
-                <ScrollView 
-                  style={styles.dropdownScrollView}
-                  showsVerticalScrollIndicator={true}
-                  nestedScrollEnabled={true}>
-                  {['오전 9:00', '오전 10:00', '오전 11:00', '오후 12:00', '오후 1:00', '오후 2:00', '오후 3:00', '오후 4:00', '오후 5:00', '오후 6:00'].map((time) => (
-                    <TouchableOpacity
-                      key={time}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        setSelectedTime(time);
-                        setIsTimeDropdownOpen(false);
-                      }}>
-                      <Text variant="bodyM" color="#111827" style={styles.dropdownItemText}>
-                        {time}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
+          <TextInput
+            style={styles.memoInput}
+            placeholder="메모를 입력해주세요 (예: 동행 1인 포함)"
+            placeholderTextColor="#9CA3AF"
+            value={memo}
+            onChangeText={setMemo}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
         </View>
       </BaseModal>
     </SafeAreaView>
@@ -199,6 +240,17 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
   bottomContainer: {
     paddingHorizontal: 16,
     paddingVertical: 17,
@@ -212,6 +264,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  applyButtonDisabled: {
+    backgroundColor: '#F3F4F6',
   },
   applyButtonText: {
     fontSize: 18,
@@ -278,5 +333,33 @@ const styles = StyleSheet.create({
   },
   dropdownScrollView: {
     maxHeight: 150,
+  },
+  optionItemContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  optionCapacity: {
+    fontSize: 12,
+    marginLeft: 8,
+  },
+  memoSection: {
+    marginTop: 24,
+  },
+  memoTitle: {
+    marginBottom: 12,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  memoInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#111827',
+    minHeight: 80,
+    backgroundColor: '#FFFFFF',
   },
 });

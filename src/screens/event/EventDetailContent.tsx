@@ -3,37 +3,28 @@ import {View, Image, StyleSheet, Dimensions} from 'react-native';
 import {Text} from '../../components/common/Text';
 import CalendarIcon from '../../assets/icons/eventCalendarIcon.svg';
 import LocationIcon from '../../assets/icons/eventLocationIcon.svg';
-
-
-interface EventDetailProps {
-  id: string;
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  address?: string;
-  time?: string;
-  status: '예정' | '진행중' | '종료';
-  imageUrl?: string;
-  tags?: string[];
-  category?: string;
-}
+import {EventDetail} from '../../hooks/useEvents';
 
 const {width: screenWidth} = Dimensions.get('window');
 
 interface EventDetailContentProps {
-  event: EventDetailProps;
+  event: EventDetail;
+  imageSource?: any;
 }
 
-export default function EventDetailContent({event}: EventDetailContentProps) {
+export default function EventDetailContent({
+  event,
+  imageSource,
+}: EventDetailContentProps) {
   return (
     <>
       {/* Hero Image */}
       <View style={styles.imageContainer}>
-        {event.imageUrl && (
+        {imageSource ? (
+          <Image source={imageSource} style={styles.image} />
+        ) : event.imageUrl ? (
           <Image source={{uri: event.imageUrl}} style={styles.image} />
-        )}
+        ) : null}
       </View>
 
       {/* Content */}
@@ -67,11 +58,6 @@ export default function EventDetailContent({event}: EventDetailContentProps) {
               <Text variant="bodyL" color="#111827" style={styles.detailValue}>
                 {event.startDate} - {event.endDate}
               </Text>
-              {event.time && (
-                <Text variant="bodyM" color="#6b7280" style={styles.detailSubValue}>
-                  {event.time}
-                </Text>
-              )}
             </View>
           </View>
 
@@ -87,9 +73,9 @@ export default function EventDetailContent({event}: EventDetailContentProps) {
               <Text variant="bodyL" color="#111827" style={styles.detailValue}>
                 {event.location}
               </Text>
-              {event.address && (
+              {event.organizerName && (
                 <Text variant="bodyM" color="#6b7280" style={styles.detailSubValue}>
-                  {event.address}
+                  주최: {event.organizerName}
                 </Text>
               )}
             </View>
