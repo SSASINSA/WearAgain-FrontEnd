@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {Image, View, TouchableOpacity, StyleSheet} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -12,13 +12,17 @@ import CommunityIcon from '../../assets/icons/community.svg';
 import ProfileIcon from '../../assets/icons/profile.svg';
 import QrCodeIcon from '../../assets/icons/qrcode.svg';
 import ClothIcon from '../../assets/icons/cloth.svg';
+import QRCodeModalScreen from '../../screens/qr/QRCodeModalScreen';
 
 
 
 const Tab = createBottomTabNavigator();
 
 export default function BottomTabNavigation() {
+  const [isQRModalVisible, setIsQRModalVisible] = useState(false);
+
   return (
+    <>
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
@@ -67,14 +71,18 @@ export default function BottomTabNavigation() {
 
               {/* QR 코드 (중앙) */}
               <View style={styles.qrContainer}>
-                <LinearGradient
-                  colors={['#06B0B7', '#642C8D']}
-                  style={styles.qrButton}
-                  start={{x: 0, y: 0}}
-                  end={{x: 1, y: 0}}
-                >
-                  <QrCodeIcon width={30} height={30} style={styles.qrIcon} />
-                </LinearGradient>
+                <TouchableOpacity
+                  onPress={() => setIsQRModalVisible(true)}
+                  activeOpacity={0.8}>
+                  <LinearGradient
+                    colors={['#06B0B7', '#642C8D']}
+                    style={styles.qrButton}
+                    start={{x: 0, y: 0}}
+                    end={{x: 1, y: 0}}
+                  >
+                    <QrCodeIcon width={30} height={30} style={styles.qrIcon} />
+                  </LinearGradient>
+                </TouchableOpacity>
                 <CustomText variant="bodyS" color="#6B7280" align="center">
                   OR
                 </CustomText>
@@ -121,6 +129,11 @@ export default function BottomTabNavigation() {
       <Tab.Screen name="Community" component={CommunityStack} />
       <Tab.Screen name="MyPage" component={MyPageStack} />
     </Tab.Navigator>
+    <QRCodeModalScreen
+      isVisible={isQRModalVisible}
+      onClose={() => setIsQRModalVisible(false)}
+    />
+    </>
   );
 }
 
