@@ -26,6 +26,7 @@ export default function EventNavigation() {
         return {
           header: () => (
             <CommonHeader
+              title="행사"
               onPressTicket={handlePressApplication}
               onPressStore={() => navigation.getParent()?.navigate('Store')}
             />

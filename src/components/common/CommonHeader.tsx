@@ -7,11 +7,15 @@ import TicketIcon from '../../assets/icons/ticket.svg';
 import StoreIcon from '../../assets/icons/store.svg';
 
 type CommonHeaderProps = {
+  title?: string;
+  titleImage?: any; // ImageSourcePropType
   onPressTicket?: () => void;
   onPressStore?: () => void;
 };
 
 export default function CommonHeader({
+  title,
+  titleImage,
   onPressTicket,
   onPressStore,
 }: CommonHeaderProps) {
@@ -20,9 +24,21 @@ export default function CommonHeader({
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          {/* 왼쪽 영역 (비워둠: 중앙 정렬을 위한 공간) */}
-          <View style={styles.headerLeft} />
-
+          {/* 왼쪽 영역 (탭 이름 또는 이미지 표시) */}
+          <View style={styles.headerLeft}>
+            {titleImage ? (
+              <Image source={titleImage} style={styles.titleImage} resizeMode="contain" />
+            ) : title ? (
+              <CustomText 
+                variant="bodyL" 
+                color="#000000"
+                weight="semiBold"
+                style={styles.title}
+              >
+                {title}
+              </CustomText>
+            ) : null}
+          </View>
           {/* 오른쪽 아이콘 영역 */}
           <View style={styles.headerRight}>
             <TouchableOpacity onPress={onPressTicket} style={styles.iconButton}>
@@ -58,13 +74,18 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
+    paddingLeft: 8,
+    justifyContent: 'center',
   },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
+  title: {
+    fontSize: 23,
+  },
+  titleImage: {
+    width: 60,
+    height: 60,
+    resizeMode: 'contain',
   },
   headerRight: {
-    flex: 1,
     flexDirection: 'row',
     justifyContent: 'flex-end',
     paddingRight: 8,
@@ -82,5 +103,5 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     resizeMode: 'contain',
-  },
+  }
 });
