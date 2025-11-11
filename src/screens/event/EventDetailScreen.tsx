@@ -3,13 +3,13 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
   TextInput,
 } from 'react-native';
 import {useRoute, RouteProp} from '@react-navigation/native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {Text} from '../../components/common/Text';
 import EventDetailContent from './EventDetailContent';
 import BaseModal from '../../components/common/BaseModal';
@@ -118,7 +118,7 @@ export default function EventDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <DetailHeader />
       
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 17,
+    paddingTop: 17,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
     backgroundColor: '#FFFFFF',

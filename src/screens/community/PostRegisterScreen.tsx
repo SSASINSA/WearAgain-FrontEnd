@@ -333,7 +333,7 @@ export default function PostRegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F2',
+    backgroundColor: '#FFFFFF',
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   keywordButton: {
-    backgroundColor: '#CED4DA',
+    backgroundColor: '#F2F2F2',
     borderRadius: 9999,
     paddingHorizontal: 16,
     paddingVertical: 7,

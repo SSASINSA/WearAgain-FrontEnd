@@ -26,6 +26,7 @@ export default function CommunityNavigation() {
         return {
           header: () => (
             <CommonHeader
+              title="커뮤니티"
               onPressTicket={handlePressApplication}
               onPressStore={() => navigation.getParent()?.navigate('Store')}
             />

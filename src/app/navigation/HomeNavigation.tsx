@@ -22,6 +22,7 @@ export default function HomeNavigation() {
         return {
           header: () => (
             <CommonHeader
+              titleImage={require('../../assets/icons/logo.png')}
               onPressTicket={handlePressApplication}
               onPressStore={() => navigation.getParent()?.navigate('Store')}
             />
