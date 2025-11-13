@@ -69,7 +69,7 @@ export default function GrowingScreen() {
   };
 
   const handleRankingPress = () => {
-    console.log('랭킹 버튼 클릭');
+    (navigation as any).navigate('Ranking');
   };
 
   return (
@@ -169,9 +169,21 @@ export default function GrowingScreen() {
             {/* 레벨 진행률 바 */}
             <View style={styles.levelCard}>
               <View style={styles.levelContent}>
-                <View style={styles.levelTextContainer}>
-                  <Text variant="bodyM" color="#6B7280">다음 레벨까지</Text>
-                  <Text variant="bodyM" color="#06b0b7">75/100 EXP</Text>
+                <View style={styles.levelTopContainer}>
+                  {/* 레벨 배지 */}
+                  <LinearGradient
+                    colors={['#06b0b7', '#08d4dc']}
+                    start={{x: 0, y: 0}}
+                    end={{x: 1, y: 0}}
+                    style={styles.levelBadge}
+                  >
+                    <Text variant="bodyL" color="#FFFFFF" weight="bold">Lv.15</Text>
+                  </LinearGradient>
+
+                  <View style={styles.levelTextContainer}>
+                    <Text variant="bodyM" color="#6B7280">다음 레벨까지</Text>
+                    <Text variant="bodyM" color="#06b0b7">75/100 EXP</Text>
+                  </View>
                 </View>
                 
                 <View style={styles.progressBarWrapper}>
@@ -186,16 +198,6 @@ export default function GrowingScreen() {
                     </View>
                   </View>
                 </View>
-
-                {/* 레벨 배지 */}
-                <LinearGradient
-                  colors={['#06b0b7', '#08d4dc']}
-                  start={{x: 0, y: 0}}
-                  end={{x: 1, y: 0}}
-                  style={styles.levelBadge}
-                >
-                  <Text variant="bodyL" color="#FFFFFF" weight="bold">Lv.15</Text>
-                </LinearGradient>
               </View>
             </View>
 
@@ -345,17 +347,24 @@ const styles = StyleSheet.create({
     borderColor: '#F3F4F6',
     position: 'relative',
     overflow: 'visible',
+    minHeight: 140,
   },
   levelContent: {
     position: 'relative',
-    paddingVertical: 16,
+    paddingVertical: 20,
     paddingHorizontal: 21,
+  },
+  levelTopContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 12,
   },
   levelTextContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    flex: 1,
   },
   progressBarWrapper: {
     position: 'relative',
@@ -376,16 +385,12 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   levelBadge: {
-    position: 'absolute',
-    top: -16,
-    left: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 9999,
-    minWidth: 54,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    minWidth: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 10,
   },
   repairButton: {
     marginHorizontal: 24,
