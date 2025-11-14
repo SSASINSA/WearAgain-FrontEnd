@@ -62,7 +62,7 @@ const mockRankings: RankingUser[] = [
   {
     rank: 3,
     userId: 'user003',
-    userName: '에코전사',
+    userName: 'Saver',
     level: 39,
     totalCo2Reduced: 200,
     totalWaterSaved: 385.0,
@@ -157,7 +157,8 @@ const mockRankings: RankingUser[] = [
   },
   {
     rank: 12,
-    userId: 'currentUser',
+    //userId: 'currentUser',
+    userId: 'tempUSer',
     userName: '나',
     level: 15,
     totalCo2Reduced: 20,
@@ -712,21 +713,21 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#06b0b7',
     borderRadius: 8,
-    marginHorizontal: 4,
+    marginVertical: 12,
   },
   rankBadgeContainer: {
-    marginRight: 12,
+    marginRight: 4,
   },
   rankBadge: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   rankBadgeNormal: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
@@ -778,7 +779,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   spacerContainer: {
-    height: 16,
     backgroundColor: 'transparent',
   },
   dotsContainer: {
