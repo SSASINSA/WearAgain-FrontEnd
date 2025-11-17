@@ -50,12 +50,12 @@ export default function PostDetailCommentComponent({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
     paddingTop: 16,
     marginBottom: 30,
   },
   title: {
     marginBottom: 16,
+    marginHorizontal: 16,
   },
   commentItem: {
     paddingHorizontal: 16,
