@@ -135,6 +135,9 @@ export default function PostDetailScreen() {
           </Text>
         </View>
 
+        {/* 구분자 */}
+        <View style={styles.divider} />
+
         {/* 이미지 영역 */}
         <View style={styles.imageSection}>
           <Image
@@ -232,6 +235,11 @@ const styles = StyleSheet.create({
   },
   title: {
     lineHeight: 28,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 16,
   },
   imageSection: {
     height: 320,

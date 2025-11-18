@@ -24,19 +24,24 @@ export default function PostDetailCommentComponent({
         댓글 {commentCount}개
       </Text>
 
-      {comments.map(item => (
-        <View key={item.id} style={styles.commentItem}>
-          <View style={styles.commentHeader}>
-            <Text variant="bodyM" color="#111827">
-              {item.author}
-            </Text>
-            <Text variant="bodyS" color="#6B7280" style={styles.commentTime}>
-              {item.timeAgo}
+      {comments.map((item, index) => (
+        <View key={item.id}>
+          <View style={styles.commentItem}>
+            <View style={styles.commentHeader}>
+              <Text variant="bodyM" color="#111827">
+                {item.author}
+              </Text>
+              <Text variant="bodyS" color="#6B7280" style={styles.commentTime}>
+                {item.timeAgo}
+              </Text>
+            </View>
+            <Text variant="bodyM" color="#374151" style={styles.commentContent}>
+              {item.content}
             </Text>
           </View>
-          <Text variant="bodyM" color="#374151" style={styles.commentContent}>
-            {item.content}
-          </Text>
+          {index < comments.length - 1 && (
+            <View style={styles.commentDivider} />
+          )}
         </View>
       ))}
     </View>
@@ -45,15 +50,21 @@ export default function PostDetailCommentComponent({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
     paddingTop: 16,
     marginBottom: 30,
   },
   title: {
     marginBottom: 16,
+    marginHorizontal: 16,
   },
   commentItem: {
-    marginBottom: 24,
+    paddingHorizontal: 16,
+  },
+  commentDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 16,
+    marginVertical: 16,
   },
   commentHeader: {
     flexDirection: 'row',
