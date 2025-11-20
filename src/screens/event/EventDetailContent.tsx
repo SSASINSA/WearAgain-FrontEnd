@@ -1,11 +1,9 @@
 import React from 'react';
-import {View, Image, StyleSheet, Dimensions} from 'react-native';
+import {View, Image, StyleSheet} from 'react-native';
 import {Text} from '../../components/common/Text';
 import CalendarIcon from '../../assets/icons/eventCalendarIcon.svg';
 import LocationIcon from '../../assets/icons/eventLocationIcon.svg';
 import {EventDetail} from '../../hooks/useEvents';
-
-const {width: screenWidth} = Dimensions.get('window');
 
 interface EventDetailContentProps {
   event: EventDetail;
@@ -88,8 +86,8 @@ export default function EventDetailContent({
 
 const styles = StyleSheet.create({
   imageContainer: {
-    height: 256,
-    width: screenWidth,
+    width: '100%',
+    aspectRatio: 1,
   },
   image: {
     width: '100%',
@@ -112,6 +110,9 @@ const styles = StyleSheet.create({
   },
   description: {
     lineHeight: 26,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 16,
   },
   detailsSection: {
     gap: 24,
