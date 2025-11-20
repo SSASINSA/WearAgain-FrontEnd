@@ -1,16 +1,14 @@
-import React, {useRef, useEffect, useCallback, useMemo, useState} from 'react';
+import React, {useRef, useCallback, useState} from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
   Linking,
   Alert,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   LayoutChangeEvent,
 } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
+import Carousel, {ICarouselInstance} from 'react-native-reanimated-carousel';
 import {Text as CustomText} from '../../../components/common/Text';
 import SmsIcon from '../../../assets/icons/sms.svg';
 import VolunteerIcon from '../../../assets/icons/volunteerIcon.svg';
@@ -33,7 +31,6 @@ interface BannerCarouselProps {
 
 const AUTO_SWIPE_INTERVAL = 2500;
 const USER_INTERACTION_DELAY = 2000;
-const INFINITE_BANNERS_REPEAT_COUNT = 100;
 
 const DEFAULT_BANNERS: Banner[] = [
   {
@@ -59,15 +56,20 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
   autoSwipeInterval = AUTO_SWIPE_INTERVAL,
   userInteractionDelay = USER_INTERACTION_DELAY,
 }) => {
-  const flatListRef = useRef<FlatList>(null);
-  const autoSwipeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const carouselRef = useRef<ICarouselInstance>(null);
   const resumeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
-  
-  // containerWidth는 bannerContainer의 실제 너비 (이미 marginHorizontal이 적용된 후)
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(true);
+
+  const {
+    isUserInteracting,
+    setIsUserInteracting,
+  } = useBannerStore();
+
   const bannerWidth = containerWidth;
-  const itemWidth = bannerWidth > 0 ? bannerWidth + 16 : 0; // 배너 너비 + 오른쪽 마진
-  
+  const itemWidth = bannerWidth + 16; // 배너 너비 + 간격
+
   const handleContainerLayout = useCallback((event: LayoutChangeEvent) => {
     const {width} = event.nativeEvent.layout;
     if (width > 0 && width !== containerWidth) {
@@ -75,141 +77,36 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
     }
   }, [containerWidth]);
 
-  const {
-    currentScrollIndex,
-    isUserInteracting,
-    setCurrentScrollIndex,
-    setIsUserInteracting,
-  } = useBannerStore();
-  
-  const getBannerState = useBannerStore.getState;
-
-  const infiniteBanners = useMemo(() => {
-    const repeatedBanners: Banner[] = [];
-    for (let i = 0; i < INFINITE_BANNERS_REPEAT_COUNT; i++) {
-      repeatedBanners.push(...banners);
-    }
-    return repeatedBanners;
-  }, [banners]);
-
-  const [indicatorIndex, setIndicatorIndex] = useState(() => {
-    if (banners.length === 0) return 0;
-    return currentScrollIndex % banners.length;
-  });
-
-  const isInitializedRef = useRef(false);
-  useEffect(() => {
-    if (!isInitializedRef.current) {
-      const initialScrollX = currentScrollIndex * itemWidth;
-      const timer = setTimeout(() => {
-        flatListRef.current?.scrollToOffset({
-          offset: initialScrollX,
-          animated: false,
-        });
-        isInitializedRef.current = true;
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-  }, [currentScrollIndex, itemWidth]);
-
-  const startAutoSwipe = useCallback(() => {
-    if (autoSwipeTimerRef.current) {
-      clearInterval(autoSwipeTimerRef.current);
-    }
-
-    autoSwipeTimerRef.current = setInterval(() => {
-      const state = getBannerState();
-      
-      if (!state.isUserInteracting && flatListRef.current) {
-        const nextIndex = state.currentScrollIndex + 1;
-        const nextScrollX = nextIndex * itemWidth;
-        const nextBannerIndex = banners.length > 0 ? nextIndex % banners.length : 0;
-
-        setCurrentScrollIndex(nextIndex);
-        setIndicatorIndex(nextBannerIndex);
-
-        flatListRef.current.scrollToOffset({
-          offset: nextScrollX,
-          animated: true,
-        });
-      }
-    }, autoSwipeInterval);
-  }, [itemWidth, autoSwipeInterval, banners.length, setCurrentScrollIndex, getBannerState]);
-
-  const stopAutoSwipe = useCallback(() => {
-    if (autoSwipeTimerRef.current) {
-      clearInterval(autoSwipeTimerRef.current);
-      autoSwipeTimerRef.current = null;
-    }
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
       setIsUserInteracting(false);
-      
+      setIsAutoPlayEnabled(true);
+
       if (resumeTimerRef.current) {
         clearTimeout(resumeTimerRef.current);
       }
 
-      resumeTimerRef.current = setTimeout(() => {
-        startAutoSwipe();
-      }, USER_INTERACTION_DELAY);
-
       return () => {
-        stopAutoSwipe();
         if (resumeTimerRef.current) {
           clearTimeout(resumeTimerRef.current);
           resumeTimerRef.current = null;
         }
       };
-    }, [startAutoSwipe, stopAutoSwipe, USER_INTERACTION_DELAY, setIsUserInteracting])
+    }, [setIsUserInteracting])
   );
 
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const scrollX = event.nativeEvent.contentOffset.x;
-      const index = Math.round(scrollX / itemWidth);
-      
-      if (index !== currentScrollIndex) {
-        setCurrentScrollIndex(index);
-      }
-    },
-    [itemWidth, currentScrollIndex, setCurrentScrollIndex]
-  );
+  const handleSnapToItem = useCallback((index: number) => {
+    setActiveIndex(index);
 
-  const handleScrollBeginDrag = useCallback(() => {
-    setIsUserInteracting(true);
-    stopAutoSwipe();
-  }, [setIsUserInteracting, stopAutoSwipe]);
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+    }
 
-  const handleMomentumScrollEnd = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const scrollX = event.nativeEvent.contentOffset.x;
-      const index = Math.round(scrollX / itemWidth);
-      const bannerIndex = banners.length > 0 ? index % banners.length : 0;
-      
-      setCurrentScrollIndex(index);
-      setIndicatorIndex(bannerIndex);
-      
-      if (resumeTimerRef.current) {
-        clearTimeout(resumeTimerRef.current);
-      }
-
-      resumeTimerRef.current = setTimeout(() => {
-        setIsUserInteracting(false);
-        startAutoSwipe();
-      }, userInteractionDelay);
-    },
-    [
-      itemWidth,
-      banners.length,
-      setCurrentScrollIndex,
-      setIsUserInteracting,
-      startAutoSwipe,
-      userInteractionDelay,
-    ]
-  );
+    resumeTimerRef.current = setTimeout(() => {
+      setIsUserInteracting(false);
+      setIsAutoPlayEnabled(true);
+    }, userInteractionDelay);
+  }, [setIsUserInteracting, userInteractionDelay]);
 
   const renderBannerIcon = (icon: string) => {
     switch (icon) {
@@ -239,8 +136,28 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
     }
   };
 
+  const handleTouchStart = useCallback(() => {
+    setIsUserInteracting(true);
+    setIsAutoPlayEnabled(false);
+
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+    }
+  }, [setIsUserInteracting]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+    }
+
+    resumeTimerRef.current = setTimeout(() => {
+      setIsUserInteracting(false);
+      setIsAutoPlayEnabled(true);
+    }, userInteractionDelay);
+  }, [setIsUserInteracting, userInteractionDelay]);
+
   const renderBannerItem = useCallback(
-    ({item, index}: {item: Banner; index: number}) => {
+    ({item}: {item: Banner}) => {
       return (
         <View
           style={[
@@ -248,7 +165,6 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
             {
               backgroundColor: item.backgroundColor,
               width: bannerWidth,
-              marginRight: 16,
             },
           ]}>
           <View style={styles.bannerContent}>
@@ -280,52 +196,34 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
     [bannerWidth]
   );
 
-  const getItemLayout = useCallback(
-    (_: any, index: number) => ({
-      length: itemWidth,
-      offset: itemWidth * index,
-      index,
-    }),
-    [itemWidth]
-  );
-
-  const keyExtractor = useCallback(
-    (_: Banner, index: number) => `banner-${index}`,
-    []
-  );
-
   return (
     <View 
       style={styles.bannerContainer}
       onLayout={handleContainerLayout}>
-      {containerWidth > 0 && (
+      {containerWidth > 0 && banners.length > 0 && (
         <>
-          <FlatList
-            ref={flatListRef}
-            data={infiniteBanners}
-            renderItem={renderBannerItem}
-            keyExtractor={keyExtractor}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            pagingEnabled
-            snapToInterval={itemWidth}
-            snapToAlignment="start"
-            decelerationRate="fast"
-            getItemLayout={getItemLayout}
-            onScroll={handleScroll}
-            onScrollBeginDrag={handleScrollBeginDrag}
-            onMomentumScrollEnd={handleMomentumScrollEnd}
-            scrollEventThrottle={16}
-            windowSize={5}
-            removeClippedSubviews={true}
-            maxToRenderPerBatch={3}
-            updateCellsBatchingPeriod={50}
-            initialNumToRender={3}
-          />
+          <View
+            style={styles.carouselSection}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}>
+            <Carousel
+              ref={carouselRef}
+              data={banners}
+              renderItem={renderBannerItem}
+              width={itemWidth}
+              height={62}
+              loop={true}
+              autoPlay={isAutoPlayEnabled && !isUserInteracting}
+              autoPlayInterval={autoSwipeInterval}
+              onSnapToItem={handleSnapToItem}
+              scrollAnimationDuration={600}
+              style={styles.carousel}
+            />
+          </View>
 
           <BannerIndicator
             banners={banners}
-            activeIndex={indicatorIndex}
+            activeIndex={activeIndex}
           />
         </>
       )}
@@ -362,9 +260,13 @@ const styles = StyleSheet.create({
   bannerContainer: {
     marginTop: 16,
     marginHorizontal: 16,
-    height: 'auto',
-    borderRadius: 3,
-    overflow: 'hidden',
+  },
+  carouselSection: {
+    height: 62,
+    width: '100%',
+  },
+  carousel: {
+    width: '100%',
   },
   bannerItem: {
     borderRadius: 3,
