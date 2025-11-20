@@ -30,11 +30,11 @@ const characterKeys = ['idle', 'sad', 'tired', 'curious'];
 
 // 캐릭터 상태별 대사
 const characterDialogues = {
-  idle: '"안녕! 오늘 뭔가 재미있는 일이 있을까?\n 나랑 얘기하자~"',
-  happy: '"오오! 수선이 정말 잘되네!\n고마워!"',
-  sad: '"다른 옷이 버려지는 것을 봐버렸어.\n너무 슬퍼. ㅠ.ㅠ"',
-  tired: '"정말 힘든 요즘이야.\n그래도 이겨낼 수 있을 거야."',
-  curious: '"내가 환경을 위해서\n할 수 있는 일이 더 없을까?"',
+  idle: '안녕! 오늘 뭔가 재미있는 일이 있을까?\n 나랑 얘기하자~',
+  happy: '오오! 수선이 정말 잘되네!\n고마워!',
+  sad: '다른 옷이 버려지는 것을 봐버렸어.\n너무 슬퍼. ㅠ.ㅠ',
+  tired: '정말 힘든 요즘이야.\n그래도 이겨낼 수 있을 거야.',
+  curious: '내가 환경을 위해서\n할 수 있는 일이 더 없을까?',
 };
 
 const imgCo2Icon = require('../../assets/icons/co2.png');
@@ -59,6 +59,9 @@ export default function GrowingScreen() {
   const scissorsRotate = React.useRef(new Animated.Value(0)).current;
   const scissorsScale = React.useRef(new Animated.Value(0.6)).current;
   const hoverAnim = React.useRef(new Animated.Value(0)).current;
+  const progressAnimValue = React.useRef(new Animated.Value(0)).current;
+  const [showLevelUpModal, setShowLevelUpModal] = React.useState(false);
+  const [levelUpReward, setLevelUpReward] = React.useState({ level: 0, credit: 0 });
 
   React.useEffect(() => {
     navigation.setOptions({
@@ -78,12 +81,12 @@ export default function GrowingScreen() {
       Animated.sequence([
         Animated.timing(hoverAnim, {
           toValue: 1,
-          duration: 2000,
+          duration: 1000,
           useNativeDriver: true,
         }),
         Animated.timing(hoverAnim, {
           toValue: 0,
-          duration: 2000,
+          duration: 1000,
           useNativeDriver: true,
         }),
       ]),
@@ -118,39 +121,39 @@ const playScissorsAnimation = (onComplete?: () => void) => {
   scissorsScale.setValue(0.6);
 
   Animated.sequence([
-    // 1. 살짝 튕기면서 페이드인
+    // 1. 나타나면서 스프링 스케일
     Animated.parallel([
       Animated.timing(scissorsOpacity, {
         toValue: 1,
-        duration: 180,
+        duration: 100,
         useNativeDriver: true,
       }),
       Animated.spring(scissorsScale, {
         toValue: 1,
-        friction: 6,
-        tension: 140,
+        speed: 12,
+        bounciness: 8,
         useNativeDriver: true,
       }),
     ]),
 
-    // 2. 대각선으로 부드럽게 3번 훑기 + 살짝 기울어진 상태 유지
+    // 2. 대각선으로 편도 이동 (회전 포함)
     Animated.parallel([
       Animated.timing(scissorsAnimX, {
         toValue: 1,
-        duration: 900,
-        easing: Easing.inOut(Easing.quad),
+        duration: 600,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
       Animated.timing(scissorsAnimY, {
         toValue: 1,
-        duration: 900,
-        easing: Easing.inOut(Easing.quad),
+        duration: 600,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
       Animated.timing(scissorsRotate, {
         toValue: 1,
-        duration: 900,
-        easing: Easing.inOut(Easing.sin),
+        duration: 600,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
     ]),
@@ -171,8 +174,14 @@ const playScissorsAnimation = (onComplete?: () => void) => {
   ]).start(onComplete);
 };
 
-
+  const lastRepairTime = React.useRef(0);
+  
   const handleRepairPress = () => {
+    // Debouncing: 마지막 수선으로부터 500ms 이상 경과해야 함
+    const now = Date.now();
+    if (now - lastRepairTime.current < 500) return;
+    lastRepairTime.current = now;
+    
     if (isAnimating || currentRepairs <= 0) return;
 
     setIsAnimating(true);
@@ -180,11 +189,48 @@ const playScissorsAnimation = (onComplete?: () => void) => {
     // EXP 35 증가 및 레벨 업 로직
     let newExp = currentExp + 35;
     let newLevel = currentLevel;
+    let isLeveledUp = false;
 
     // 100 이상의 EXP가 있는 동안 레벨 업
     while (newExp >= 100) {
       newLevel += 1;
       newExp -= 100;
+      isLeveledUp = true;
+    }
+
+    // progressBar 애니메이션 시작
+    if (isLeveledUp) {
+      // 레벨업이 있는 경우: 100까지 올라갔다가 새 EXP로 리셋
+      Animated.sequence([
+        // 1단계: 100까지 올라가기
+        Animated.timing(progressAnimValue, {
+          toValue: 100,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        // 2단계: 리셋 (즉시)
+        Animated.timing(progressAnimValue, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: false,
+        }),
+        // 3단계: 새 EXP까지 차오르기
+        Animated.timing(progressAnimValue, {
+          toValue: newExp,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+      ]).start();
+    } else {
+      // 레벨업이 없는 경우: 단순히 새 EXP까지 올라가기
+      Animated.timing(progressAnimValue, {
+        toValue: newExp,
+        duration: 800,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
     }
 
     setCurrentExp(newExp);
@@ -200,7 +246,13 @@ const playScissorsAnimation = (onComplete?: () => void) => {
       // 애니메이션 완료 후 2초 후 idle로 복귀
       setTimeout(() => {
         setCurrentCharacter('idle');
-      }, 2000);
+        
+        // 레벨업 여부에 따라 팝업 표시
+        if (isLeveledUp) {
+          setLevelUpReward({ level: newLevel, credit: 100 });
+          setShowLevelUpModal(true);
+        }
+      }, 500);
     });
   };
 
@@ -221,7 +273,7 @@ const playScissorsAnimation = (onComplete?: () => void) => {
           {/* 상단 콘텐츠 영역 */}
           <View style={styles.topContent}>
             {/* 환경 통계 카드 */}
-            <View style={styles.statsCard}>
+            <View style={[styles.statsCard]}>
               <View style={styles.statsContent}>
                 {/* CO2 절감 */}
                 <View style={styles.statItem}>
@@ -271,10 +323,6 @@ const playScissorsAnimation = (onComplete?: () => void) => {
               style={styles.characterSection}
               activeOpacity={1}
             >
-              {/* 화살표 */}
-              <View style={styles.arrowContainer}>
-                <Image source={{uri: imgPolygon1}} style={styles.arrowIcon} />
-              </View>
 
               {/* 캐릭터 이미지 */}
               <Animated.View
@@ -304,27 +352,27 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                         // 0. 등장/퇴장 스케일
                         { scale: scissorsScale },
 
-                        // 1. 살짝 기울어진 상태로 왔다 갔다 (전부 360도 회전 대신)
+                        // 1. 회전 애니메이션
                         {
                           rotate: scissorsRotate.interpolate({
-                            inputRange: [0, 0.25, 0.5, 0.75, 1],
-                            outputRange: ['-18deg', '-12deg', '-16deg', '-10deg', '-14deg'],
+                            inputRange: [0, 1],
+                            outputRange: ['0deg', '360deg'],
                           }),
                         },
 
-                        // 2. X축: 대각선으로 좌우 3번 스윕 후 중앙으로
+                        // 2. X축: 대각선 편도 이동 (왼쪽 위에서 오른쪽 아래로, 한 번만)
                         {
                           translateX: scissorsAnimX.interpolate({
-                            inputRange: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
-                            outputRange: [-72, 72, -60, 60, -48, 48, 0],
+                            inputRange: [0, 1],
+                            outputRange: [-80, 80],
                           }),
                         },
 
-                        // 3. Y축: X랑 비슷하게 대각선 스윕
+                        // 3. Y축: X랑 반대로 대각선 편도 이동
                         {
                           translateY: scissorsAnimY.interpolate({
-                            inputRange: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
-                            outputRange: [-64, 64, -52, 52, -40, 40, 0],
+                            inputRange: [0, 1],
+                            outputRange: [-80, 80],
                           }),
                         },
                       ],
@@ -404,26 +452,36 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                 <View style={styles.progressBarWrapper}>
                   <View style={styles.progressBarContainer}>
                     <View style={styles.progressBarBackground}>
-                      <LinearGradient
-                        colors={['#06b0b7', '#08d4dc']}
-                        start={{x: 0, y: 0}}
-                        end={{x: 1, y: 0}}
-                        style={[styles.progressBarFill, { width: `${currentExp}%` }]}
-                      />
+                      <Animated.View
+                        style={[
+                          styles.progressBarFill,
+                          {
+                            width: progressAnimValue.interpolate({
+                              inputRange: [0, 100],
+                              outputRange: ['0%', '100%'],
+                            }),
+                          },
+                        ]}
+                      >
+                        <LinearGradient
+                          colors={['#06b0b7', '#08d4dc']}
+                          start={{x: 0, y: 0}}
+                          end={{x: 1, y: 0}}
+                          style={{ width: '100%', height: '100%' }}
+                        />
+                      </Animated.View>
                     </View>
                   </View>
                 </View>
-              </View>
-            </View>
 
-            {/* 수선하기 버튼 */}
-            <TouchableOpacity 
-              onPress={handleRepairPress} 
-              style={styles.repairButton}
-              disabled={isAnimating || currentRepairs <= 0}
-            >
-              <LinearGradient
-                colors={isAnimating || currentRepairs <= 0 ? ['#CCCCCC', '#CCCCCC'] : ['#8a3fb8', '#8a3fb8']}
+                {/* 수선하기 버튼 */}
+                <TouchableOpacity 
+                  onPress={handleRepairPress} 
+                  style={styles.repairButton}
+                  disabled={isAnimating || currentRepairs <= 0}
+                >
+                  <LinearGradient
+                colors={isAnimating || currentRepairs <= 0 ? ['#CCCCCC', '#CCCCCC'] : ['#8a3fb8', '#7E3AA8']}
                 start={{x: 0, y: 0}}
                 end={{x: 1, y: 0}}
                 style={styles.repairButtonGradient}
@@ -432,10 +490,54 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                 <Text variant="bodyL" color="#FFFFFF" weight="bold">수선하기</Text>
                 <Text variant="bodyL" color="#FFFFFF" weight="bold">{currentRepairs}</Text>
               </LinearGradient>
-            </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
       </LinearGradient>
+
+      {/* 레벨업 팝업 */}
+      {showLevelUpModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text variant="headlineL" color="#8a3fb8" weight="bold" align="center" style={styles.modalTitle}>
+              레벨업을 축하합니다! 🎉
+            </Text>
+            
+            <View style={styles.modalRewardContainer}>
+              <View style={styles.rewardItem}>
+                <Text variant="bodyM" color="#666666" align="center">
+                  레벨업
+                </Text>
+                <Text variant="headlineL" color="#8a3fb8" weight="bold" align="center">
+                  Lv.{levelUpReward.level}
+                </Text>
+              </View>
+              
+              <View style={styles.rewardDivider} />
+              
+              <View style={styles.rewardItem}>
+                <Text variant="bodyM" color="#666666" align="center">
+                  크레딧 리워드
+                </Text>
+                <Text variant="headlineL" color="#06b0b7" weight="bold" align="center">
+                  +{levelUpReward.credit}C
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setShowLevelUpModal(false)}
+            >
+              <Text variant="bodyL" color="#FFFFFF" weight="bold" align="center">
+                확인
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -459,12 +561,15 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   statsCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     marginHorizontal: 24,
     marginTop: 24,
+    marginBottom: 2,
     paddingVertical: 20,
-    shadowColor: '#000000',
+    borderWidth: 4,
+    borderColor: '#D5F5D0',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#3C543C',
     shadowOffset: {
       width: 0,
       height: 8,
@@ -525,6 +630,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   characterImage: {
     width: '100%',
@@ -555,6 +662,62 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 60,
     backgroundColor: '#D1D5DB',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    width: '80%',
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 25,
+    elevation: 12,
+  },
+  modalTitle: {
+    marginBottom: 24,
+  },
+  modalRewardContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  rewardItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  rewardDivider: {
+    width: 1,
+    height: 60,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 12,
+  },
+  modalButton: {
+    width: '100%',
+    paddingVertical: 14,
+    backgroundColor: '#8a3fb8',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   characterNameContainer: {
     width: 176,
@@ -615,7 +778,7 @@ const styles = StyleSheet.create({
   },
   progressBarWrapper: {
     position: 'relative',
-    paddingTop: 16,
+    paddingTop: 4,
   },
   progressBarContainer: {
     marginBottom: 0,
@@ -628,8 +791,8 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    width: '75%', // 75/100 = 75%
     borderRadius: 9999,
+    overflow: 'hidden',
   },
   levelBadge: {
     paddingHorizontal: 12,
@@ -640,7 +803,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   repairButton: {
-    marginHorizontal: 24,
+    marginTop: 20,
+    width: '100%',
   },
   repairButtonGradient: {
     flexDirection: 'row',
