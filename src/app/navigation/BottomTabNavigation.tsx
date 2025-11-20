@@ -10,7 +10,7 @@ import MyPageStack from './MyPageNavigation';
 import {Text as CustomText} from '../../components/common/Text';
 import HomeIcon from '../../assets/icons/home.svg';
 import CommunityIcon from '../../assets/icons/community.svg';
-import ProfileIcon from '../../assets/icons/profile.svg';
+import MoreHorizIcon from '../../assets/icons/more_horiz.svg'
 import QrCodeIcon from '../../assets/icons/qrcode.svg';
 import ClothIcon from '../../assets/icons/cloth.svg';
 import QRCodeModalScreen from '../../screens/qr/QRCodeModalScreen';
@@ -110,14 +110,14 @@ export default function BottomTabNavigation() {
                 style={styles.navItem}
                 onPress={() => props.navigation.navigate('MyPage')}
               >
-                <ProfileIcon 
+                <MoreHorizIcon 
                   width={20} 
                   height={20} 
                   color={activeTabIndex === 3 ? '#06B0B7' : '#9CA3AF'}
                   style={styles.navIcon} 
                 />
                 <CustomText variant="bodyS" color={activeTabIndex === 3 ? '#06B0B7' : '#9CA3AF'} align="center">
-                  내정보
+                  더보기
                 </CustomText>
               </TouchableOpacity>
             </View>
