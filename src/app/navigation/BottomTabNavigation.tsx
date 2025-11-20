@@ -1,7 +1,8 @@
 import React, {useState} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {Image, View, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import HomeStack from './HomeNavigation';
 import EventStack from './EventNavigation';
 import CommunityStack from './CommunityNavigation';
@@ -35,7 +36,7 @@ export default function BottomTabNavigation() {
         const activeTabIndex = state.index;
         
         return (
-          <View style={styles.bottomNav}>
+          <SafeAreaView style={styles.bottomNav} edges={['bottom']}>
             <View style={styles.navContainer}>
               {/* 홈 */}
               <TouchableOpacity 
@@ -84,7 +85,7 @@ export default function BottomTabNavigation() {
                   </LinearGradient>
                 </TouchableOpacity>
                 <CustomText variant="bodyS" color="#6B7280" align="center">
-                  OR
+                  QR 코드
                 </CustomText>
               </View>
 
@@ -120,7 +121,7 @@ export default function BottomTabNavigation() {
                 </CustomText>
               </TouchableOpacity>
             </View>
-          </View>
+          </SafeAreaView>
         );
       }}
     >
@@ -142,15 +143,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    height: 100,
+    width: '100%',
     paddingTop: 9,
+    paddingHorizontal: 10,
   },
   navContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 64,
+    justifyContent: 'space-evenly',
+      flexDirection: 'row',
+      alignItems: 'center',
+      height: 64,
   },
   navItem: {
     alignItems: 'center',
@@ -162,9 +163,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   qrContainer: {
+    marginHorizontal: 16,
     alignItems: 'center',
     position: 'relative',
     marginTop: -23,
+    justifyContent: 'center',
   },
   qrButton: {
     width: 56,
