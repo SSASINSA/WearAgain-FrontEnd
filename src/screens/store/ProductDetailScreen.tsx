@@ -5,23 +5,17 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import StoreHeader from './StoreHeader';
 import {Text} from '../../components/common/Text';
 import ProductDetailContent, {ProductDetailData} from './ProductDetailContent';
-import BaseModal from '../../components/common/BaseModal';
+import ProductExchangeModal from './ProductExchangeModal';
 
 type ProductDetailRouteProp = RouteProp<
   {ProductDetail: {productId: string}},
   'ProductDetail'
 >;
 
-interface ProductExchangeOptions {
-  locations?: string;
-}
-
 export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailRouteProp>();
   const {productId} = route.params;
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<string>('');
-  const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
 
   // TODO: 실제로는 productId를 기반으로 API에서 데이터를 가져와야 함
   const product: ProductDetailData = {
@@ -36,15 +30,10 @@ export default function ProductDetailScreen() {
     setIsModalVisible(true);
   };
 
-  const handleConfirmExchange = () => {
-    const options: ProductExchangeOptions = {
-      locations: selectedLocation,
-    };
-    console.log('교환하기 확인:', productId, options);
+  const handleConfirmExchange = (location: string) => {
+    console.log('교환하기 확인:', productId, {location});
     // TODO: 교환 API 호출
     setIsModalVisible(false);
-    setSelectedLocation('');
-    setIsLocationDropdownOpen(false);
   };
 
   return (
@@ -67,55 +56,11 @@ export default function ProductDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <BaseModal
+      <ProductExchangeModal
         isVisible={isModalVisible}
-        onClose={() => {
-          setIsModalVisible(false);
-          setSelectedLocation('');
-          setIsLocationDropdownOpen(false);
-        }}
+        onClose={() => setIsModalVisible(false)}
         onConfirm={handleConfirmExchange}
-        title="수령 장소 선택"
-        confirmButtonText="교환 신청"
-        height={350}>
-        <View style={styles.optionSection}>
-          <View style={styles.dropdownContainer}>
-            <TouchableOpacity
-              style={styles.dropdownButton}
-              onPress={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}>
-              <Text variant="bodyM" color={selectedLocation ? "#111827" : "#6b7280"} style={styles.dropdownButtonText}>
-                {selectedLocation || '장소를 선택해주세요'}
-              </Text>
-              <Text style={styles.dropdownArrow}>
-                {isLocationDropdownOpen ? '▲' : '▼'}
-              </Text>
-            </TouchableOpacity>
-            
-            {isLocationDropdownOpen && (
-              <View style={styles.dropdownList}>
-                <ScrollView 
-                  style={styles.dropdownScrollView}
-                  showsVerticalScrollIndicator={true}
-                  nestedScrollEnabled={true}>
-                  {['서울', '경기', '인천', '강원', '충청', '전라', '경상', '제주'].map((location) => (
-                    <TouchableOpacity
-                      key={location}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        setSelectedLocation(location);
-                        setIsLocationDropdownOpen(false);
-                      }}>
-                      <Text variant="bodyM" color="#111827" style={styles.dropdownItemText}>
-                        {location}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-        </View>
-      </BaseModal>
+      />
     </SafeAreaView>
   );
 }
@@ -148,63 +93,6 @@ const styles = StyleSheet.create({
   applyButtonText: {
     fontSize: 18,
     fontWeight: '600',
-  },
-  optionSection: {
-    marginBottom: 24,
-  },
-  dropdownContainer: {
-    marginBottom: 0,
-  },
-  dropdownButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  dropdownButtonText: {
-    flex: 1,
-    fontSize: 14,
-  },
-  dropdownArrow: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginLeft: 8,
-  },
-  dropdownList: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderTopWidth: 0,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    marginTop: 4,
-    maxHeight: 150,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  dropdownItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  dropdownItemText: {
-    fontSize: 14,
-  },
-  dropdownScrollView: {
-    maxHeight: 150,
   },
 });
 
