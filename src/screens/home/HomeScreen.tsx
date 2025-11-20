@@ -29,24 +29,6 @@ export default function HomeScreen() {
     ],
   };
 
-  // 배너 데이터
-  const banners = [
-    {
-      id: 1,
-      title: '환경 뉴스레터',
-      buttonText: '보러가기',
-      backgroundColor: '#642C8D',
-      icon: 'sms' as const,
-    },
-    {
-      id: 2,
-      title: '당신의 마음을 입히세요',
-      buttonText: '응원하기',
-      backgroundColor: '#E27931',
-      icon: 'volunteer' as const,
-    },
-  ];
-
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <View style={styles.view}>
@@ -54,7 +36,7 @@ export default function HomeScreen() {
         <ProfileCard userStats={userStats} />
 
         {/* 자동 스와이프 배너 */}
-        <BannerCarousel banners={banners} />
+        <BannerCarousel />
 
         {/* 진행 중인 이벤트 */}
         <EventsSection />

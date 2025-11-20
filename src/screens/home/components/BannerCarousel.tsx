@@ -1,8 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
-import { Text as CustomText } from '../../../components/common/Text';
+import React, {useRef, useEffect, useCallback, useMemo, useState} from 'react';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  Linking,
+  Alert,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  LayoutChangeEvent,
+} from 'react-native';
+import {useFocusEffect} from '@react-navigation/native';
+import {Text as CustomText} from '../../../components/common/Text';
 import SmsIcon from '../../../assets/icons/sms.svg';
 import VolunteerIcon from '../../../assets/icons/volunteerIcon.svg';
+import {useBannerStore} from '../../../store/banner.store';
 
 interface Banner {
   id: number;
@@ -10,162 +22,341 @@ interface Banner {
   buttonText: string;
   backgroundColor: string;
   icon: 'sms' | 'volunteer';
+  link?: string;
 }
 
 interface BannerCarouselProps {
-  banners: Banner[];
+  banners?: Banner[];
   autoSwipeInterval?: number;
   userInteractionDelay?: number;
 }
 
-const AUTO_SWIPE_INTERVAL = 3000;
-const USER_INTERACTION_DELAY = 3000;
+const AUTO_SWIPE_INTERVAL = 2500;
+const USER_INTERACTION_DELAY = 2000;
 const INFINITE_BANNERS_REPEAT_COUNT = 100;
 
-export const BannerCarousel: React.FC<BannerCarouselProps> = ({ 
-  banners, 
-  autoSwipeInterval = AUTO_SWIPE_INTERVAL,
-  userInteractionDelay = USER_INTERACTION_DELAY 
-}) => {
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const [isUserInteracting, setIsUserInteracting] = useState(false);
-  const scrollViewRef = useRef<ScrollView>(null);
-  const screenWidth = Dimensions.get('window').width - 32;
+const DEFAULT_BANNERS: Banner[] = [
+  {
+    id: 1,
+    title: '환경 뉴스레터',
+    buttonText: '보러가기',
+    backgroundColor: '#642C8D',
+    icon: 'sms' as const,
+    link: 'https://page.stibee.com/archives/69943',
+  },
+  {
+    id: 2,
+    title: '당신의 마음을 입히세요',
+    buttonText: '응원하기',
+    backgroundColor: '#E27931',
+    icon: 'volunteer' as const,
+    link: 'https://box.donus.org/box/wearagain/saveclothes?_ga=2.168483685.557985844.1678075479-710762688.1676980328',
+  },
+];
 
-  const createInfiniteBanners = (): Banner[] => {
+export const BannerCarousel: React.FC<BannerCarouselProps> = ({
+  banners = DEFAULT_BANNERS,
+  autoSwipeInterval = AUTO_SWIPE_INTERVAL,
+  userInteractionDelay = USER_INTERACTION_DELAY,
+}) => {
+  const flatListRef = useRef<FlatList>(null);
+  const autoSwipeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const resumeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  
+  // containerWidth는 bannerContainer의 실제 너비 (이미 marginHorizontal이 적용된 후)
+  const bannerWidth = containerWidth;
+  const itemWidth = bannerWidth > 0 ? bannerWidth + 16 : 0; // 배너 너비 + 오른쪽 마진
+  
+  const handleContainerLayout = useCallback((event: LayoutChangeEvent) => {
+    const {width} = event.nativeEvent.layout;
+    if (width > 0 && width !== containerWidth) {
+      setContainerWidth(width);
+    }
+  }, [containerWidth]);
+
+  const {
+    currentScrollIndex,
+    isUserInteracting,
+    setCurrentScrollIndex,
+    setIsUserInteracting,
+  } = useBannerStore();
+  
+  const getBannerState = useBannerStore.getState;
+
+  const infiniteBanners = useMemo(() => {
     const repeatedBanners: Banner[] = [];
     for (let i = 0; i < INFINITE_BANNERS_REPEAT_COUNT; i++) {
       repeatedBanners.push(...banners);
     }
     return repeatedBanners;
-  };
+  }, [banners]);
 
-  const infiniteBanners = createInfiniteBanners();
-  const startIndex = Math.floor(infiniteBanners.length / 2);
-  const [currentScrollIndex, setCurrentScrollIndex] = useState(startIndex);
+  const [indicatorIndex, setIndicatorIndex] = useState(() => {
+    if (banners.length === 0) return 0;
+    return currentScrollIndex % banners.length;
+  });
 
+  const isInitializedRef = useRef(false);
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (scrollViewRef.current) {
-        const initialScrollX = startIndex * (screenWidth + 16);
-        scrollViewRef.current.scrollTo({
-          x: initialScrollX,
+    if (!isInitializedRef.current) {
+      const initialScrollX = currentScrollIndex * itemWidth;
+      const timer = setTimeout(() => {
+        flatListRef.current?.scrollToOffset({
+          offset: initialScrollX,
           animated: false,
         });
-      }
-    }, 100);
+        isInitializedRef.current = true;
+      }, 100);
 
-    return () => clearTimeout(timer);
-  }, []);
+      return () => clearTimeout(timer);
+    }
+  }, [currentScrollIndex, itemWidth]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!isUserInteracting && scrollViewRef.current) {
-        setCurrentBannerIndex((prevIndex) => {
-          const nextIndex = (prevIndex + 1) % banners.length;
-          return nextIndex;
-        });
-        
-        setCurrentScrollIndex((prevScrollIndex) => {
-          const nextScrollIndex = prevScrollIndex + 1;
-          const nextScrollX = nextScrollIndex * (screenWidth + 16);
-          
-          scrollViewRef.current?.scrollTo({
-            x: nextScrollX,
-            animated: true,
-          });
-          
-          return nextScrollIndex;
+  const startAutoSwipe = useCallback(() => {
+    if (autoSwipeTimerRef.current) {
+      clearInterval(autoSwipeTimerRef.current);
+    }
+
+    autoSwipeTimerRef.current = setInterval(() => {
+      const state = getBannerState();
+      
+      if (!state.isUserInteracting && flatListRef.current) {
+        const nextIndex = state.currentScrollIndex + 1;
+        const nextScrollX = nextIndex * itemWidth;
+        const nextBannerIndex = banners.length > 0 ? nextIndex % banners.length : 0;
+
+        setCurrentScrollIndex(nextIndex);
+        setIndicatorIndex(nextBannerIndex);
+
+        flatListRef.current.scrollToOffset({
+          offset: nextScrollX,
+          animated: true,
         });
       }
     }, autoSwipeInterval);
+  }, [itemWidth, autoSwipeInterval, banners.length, setCurrentScrollIndex, getBannerState]);
 
-    return () => clearInterval(interval);
-  }, [screenWidth, banners.length, isUserInteracting, autoSwipeInterval]);
+  const stopAutoSwipe = useCallback(() => {
+    if (autoSwipeTimerRef.current) {
+      clearInterval(autoSwipeTimerRef.current);
+      autoSwipeTimerRef.current = null;
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsUserInteracting(false);
+      
+      if (resumeTimerRef.current) {
+        clearTimeout(resumeTimerRef.current);
+      }
+
+      resumeTimerRef.current = setTimeout(() => {
+        startAutoSwipe();
+      }, USER_INTERACTION_DELAY);
+
+      return () => {
+        stopAutoSwipe();
+        if (resumeTimerRef.current) {
+          clearTimeout(resumeTimerRef.current);
+          resumeTimerRef.current = null;
+        }
+      };
+    }, [startAutoSwipe, stopAutoSwipe, USER_INTERACTION_DELAY, setIsUserInteracting])
+  );
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const scrollX = event.nativeEvent.contentOffset.x;
+      const index = Math.round(scrollX / itemWidth);
+      
+      if (index !== currentScrollIndex) {
+        setCurrentScrollIndex(index);
+      }
+    },
+    [itemWidth, currentScrollIndex, setCurrentScrollIndex]
+  );
+
+  const handleScrollBeginDrag = useCallback(() => {
+    setIsUserInteracting(true);
+    stopAutoSwipe();
+  }, [setIsUserInteracting, stopAutoSwipe]);
+
+  const handleMomentumScrollEnd = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const scrollX = event.nativeEvent.contentOffset.x;
+      const index = Math.round(scrollX / itemWidth);
+      const bannerIndex = banners.length > 0 ? index % banners.length : 0;
+      
+      setCurrentScrollIndex(index);
+      setIndicatorIndex(bannerIndex);
+      
+      if (resumeTimerRef.current) {
+        clearTimeout(resumeTimerRef.current);
+      }
+
+      resumeTimerRef.current = setTimeout(() => {
+        setIsUserInteracting(false);
+        startAutoSwipe();
+      }, userInteractionDelay);
+    },
+    [
+      itemWidth,
+      banners.length,
+      setCurrentScrollIndex,
+      setIsUserInteracting,
+      startAutoSwipe,
+      userInteractionDelay,
+    ]
+  );
 
   const renderBannerIcon = (icon: string) => {
     switch (icon) {
       case 'sms':
-        return <SmsIcon width={20} height={20} style={styles.newsletterIcons} />;
+        return <SmsIcon width={20} height={20} style={styles.bannerIcon} />;
       case 'volunteer':
-        return <VolunteerIcon width={20} height={20} style={styles.newsletterIcons} />;
+        return <VolunteerIcon width={20} height={20} style={styles.bannerIcon} />;
       default:
         return null;
     }
   };
 
-  return (
-    <View style={styles.bannerContainer}>
-      <ScrollView
-        ref={scrollViewRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.swiper}
-        contentOffset={{ x: startIndex * (screenWidth + 16), y: 0 }}
-        snapToInterval={screenWidth + 16}
-        snapToAlignment="start"
-        decelerationRate="fast"
-        onScrollBeginDrag={() => {
-          setIsUserInteracting(true);
-        }}
-        onMomentumScrollEnd={(event) => {
-          const scrollX = event.nativeEvent.contentOffset.x;
-          const index = Math.round(scrollX / (screenWidth + 16));
-          const actualIndex = index % banners.length;
-          
-          setCurrentBannerIndex(actualIndex);
-          setCurrentScrollIndex(index);
-          
-          setTimeout(() => {
-            setIsUserInteracting(false);
-          }, userInteractionDelay);
-        }}
-        scrollEventThrottle={16}
-      >
-        {infiniteBanners.map((banner, index) => (
-          <View 
-            key={`${banner.id}-${index}`}
-            style={[
-              styles.newsletterBanner, 
-              {
-                backgroundColor: banner.backgroundColor,
-                width: screenWidth,
-                marginRight: 16,
-              }
-            ]}
-          >
-            <View style={styles.newsletterContent}>
-              <View style={styles.newsletterIcons}>
-                {renderBannerIcon(banner.icon)}
-              </View>
-              <CustomText variant="headlineM" color="#FFFFFF" style={styles.newsletterText}>
-                {banner.title}
-              </CustomText>
-              <TouchableOpacity style={styles.newsletterButton}>
-                <CustomText variant="labelM" color={banner.backgroundColor} weight="semiBold" align="center">
-                  {banner.buttonText}
-                </CustomText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+  const handleBannerPress = async (link?: string) => {
+    if (!link) {
+      return;
+    }
 
-      {/* 배너 인디케이터 */}
-      <View style={styles.bannerIndicator}>
-        {banners.map((_, index) => (
-          <View 
-            key={index}
-            style={[
-              styles.indicatorDot, 
-              currentBannerIndex === index ? styles.activeDot : styles.inactiveDot
-            ]} 
+    try {
+      const canOpen = await Linking.canOpenURL(link);
+      if (canOpen) {
+        await Linking.openURL(link);
+      } else {
+        Alert.alert('오류', '링크를 열 수 없습니다.');
+      }
+    } catch (error) {
+      Alert.alert('오류', '링크를 열 수 없습니다.');
+    }
+  };
+
+  const renderBannerItem = useCallback(
+    ({item, index}: {item: Banner; index: number}) => {
+      return (
+        <View
+          style={[
+            styles.bannerItem,
+            {
+              backgroundColor: item.backgroundColor,
+              width: bannerWidth,
+              marginRight: 16,
+            },
+          ]}>
+          <View style={styles.bannerContent}>
+            <View style={styles.bannerIcon}>
+              {renderBannerIcon(item.icon)}
+            </View>
+            <CustomText
+              variant="headlineM"
+              color="#FFFFFF"
+              style={styles.bannerText}>
+              {item.title}
+            </CustomText>
+            <TouchableOpacity
+              style={styles.bannerButton}
+              onPress={() => handleBannerPress(item.link)}
+              activeOpacity={0.8}>
+              <CustomText
+                variant="labelM"
+                color={item.backgroundColor}
+                weight="semiBold"
+                align="center">
+                {item.buttonText}
+              </CustomText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    },
+    [bannerWidth]
+  );
+
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({
+      length: itemWidth,
+      offset: itemWidth * index,
+      index,
+    }),
+    [itemWidth]
+  );
+
+  const keyExtractor = useCallback(
+    (_: Banner, index: number) => `banner-${index}`,
+    []
+  );
+
+  return (
+    <View 
+      style={styles.bannerContainer}
+      onLayout={handleContainerLayout}>
+      {containerWidth > 0 && (
+        <>
+          <FlatList
+            ref={flatListRef}
+            data={infiniteBanners}
+            renderItem={renderBannerItem}
+            keyExtractor={keyExtractor}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            pagingEnabled
+            snapToInterval={itemWidth}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            getItemLayout={getItemLayout}
+            onScroll={handleScroll}
+            onScrollBeginDrag={handleScrollBeginDrag}
+            onMomentumScrollEnd={handleMomentumScrollEnd}
+            scrollEventThrottle={16}
+            windowSize={5}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={3}
+            updateCellsBatchingPeriod={50}
+            initialNumToRender={3}
           />
-        ))}
-      </View>
+
+          <BannerIndicator
+            banners={banners}
+            activeIndex={indicatorIndex}
+          />
+        </>
+      )}
     </View>
   );
 };
+
+interface BannerIndicatorProps {
+  banners: Banner[];
+  activeIndex: number;
+}
+
+const BannerIndicator = React.memo<BannerIndicatorProps>(
+  ({banners, activeIndex}) => {
+    return (
+      <View style={styles.bannerIndicator}>
+        {banners.map((banner, index) => (
+          <View
+            key={banner.id}
+            style={[
+              styles.indicatorDot,
+              activeIndex === index ? styles.activeDot : styles.inactiveDot,
+            ]}
+          />
+        ))}
+      </View>
+    );
+  }
+);
+
+BannerIndicator.displayName = 'BannerIndicator';
 
 const styles = StyleSheet.create({
   bannerContainer: {
@@ -175,33 +366,30 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     overflow: 'hidden',
   },
-  swiper: {
-    height: 62,
-  },
-  newsletterBanner: {
+  bannerItem: {
     borderRadius: 3,
     padding: 16,
     height: 62,
     flex: 1,
     justifyContent: 'center',
   },
-  newsletterContent: {
+  bannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     height: '100%',
   },
-  newsletterIcons: {
+  bannerIcon: {
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 10,
   },
-  newsletterText: {
+  bannerText: {
     flex: 1,
     fontSize: 18,
     fontWeight: '400',
     marginLeft: 10,
   },
-  newsletterButton: {
+  bannerButton: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 0,
