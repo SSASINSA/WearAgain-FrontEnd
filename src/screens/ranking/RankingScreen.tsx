@@ -436,11 +436,6 @@ export default function RankingScreen() {
         {/* 사용자 정보 */}
         <View style={styles.userInfo}>
           <View style={styles.userNameContainer}>
-            <View style={styles.levelBadge}>
-              <Text variant="bodyS" color="#FFFFFF" weight="bold">
-                Lv.{item.level}
-              </Text>
-            </View>
             <Text variant="bodyM" color="#374151" weight="bold">
               {item.userName}
             </Text>
