@@ -7,6 +7,7 @@ import {
   Dimensions,
   Animated,
   Easing,
+  Alert,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -51,7 +52,7 @@ export default function GrowingScreen() {
   const [currentCharacter, setCurrentCharacter] = React.useState('idle');
   const [currentLevel, setCurrentLevel] = React.useState(1);
   const [currentExp, setCurrentExp] = React.useState(0);
-  const [currentRepairs, setCurrentRepairs] = React.useState(5);
+  const [currentRepairs, setCurrentRepairs] = React.useState(30);
   const [isAnimating, setIsAnimating] = React.useState(false);
   const scissorsAnimX = React.useRef(new Animated.Value(0)).current;
   const scissorsAnimY = React.useRef(new Animated.Value(0)).current;
