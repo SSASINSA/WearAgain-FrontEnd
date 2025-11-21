@@ -1,8 +1,6 @@
 import React from 'react';
-import {View, Image, StyleSheet, Dimensions} from 'react-native';
+import {View, Image, StyleSheet} from 'react-native';
 import {Text} from '../../components/common/Text';
-
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
 export interface ProductDetailData {
   id: string;
@@ -49,10 +47,8 @@ export default function ProductDetailContent({product}: ProductDetailContentProp
 
 const styles = StyleSheet.create({
   imageSection: {
-    width: SCREEN_WIDTH,
-    height: 320,
+    aspectRatio: 1,
     backgroundColor: '#E5E7EB',
-    position: 'relative',
   },
   productImage: {
     width: '100%',

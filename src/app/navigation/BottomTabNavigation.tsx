@@ -1,7 +1,8 @@
 import React, {useState} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {Image, View, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import HomeStack from './HomeNavigation';
 import EventStack from './EventNavigation';
 import CommunityStack from './CommunityNavigation';
@@ -9,7 +10,7 @@ import MyPageStack from './MyPageNavigation';
 import {Text as CustomText} from '../../components/common/Text';
 import HomeIcon from '../../assets/icons/home.svg';
 import CommunityIcon from '../../assets/icons/community.svg';
-import ProfileIcon from '../../assets/icons/profile.svg';
+import MoreHorizIcon from '../../assets/icons/more_horiz.svg'
 import QrCodeIcon from '../../assets/icons/qrcode.svg';
 import ClothIcon from '../../assets/icons/cloth.svg';
 import QRCodeModalScreen from '../../screens/qr/QRCodeModalScreen';
@@ -35,7 +36,7 @@ export default function BottomTabNavigation() {
         const activeTabIndex = state.index;
         
         return (
-          <View style={styles.bottomNav}>
+          <SafeAreaView style={styles.bottomNav} edges={['bottom']}>
             <View style={styles.navContainer}>
               {/* 홈 */}
               <TouchableOpacity 
@@ -84,7 +85,7 @@ export default function BottomTabNavigation() {
                   </LinearGradient>
                 </TouchableOpacity>
                 <CustomText variant="bodyS" color="#6B7280" align="center">
-                  OR
+                  QR 코드
                 </CustomText>
               </View>
 
@@ -109,18 +110,18 @@ export default function BottomTabNavigation() {
                 style={styles.navItem}
                 onPress={() => props.navigation.navigate('MyPage')}
               >
-                <ProfileIcon 
+                <MoreHorizIcon 
                   width={20} 
                   height={20} 
                   color={activeTabIndex === 3 ? '#06B0B7' : '#9CA3AF'}
                   style={styles.navIcon} 
                 />
                 <CustomText variant="bodyS" color={activeTabIndex === 3 ? '#06B0B7' : '#9CA3AF'} align="center">
-                  내정보
+                  더보기
                 </CustomText>
               </TouchableOpacity>
             </View>
-          </View>
+          </SafeAreaView>
         );
       }}
     >
@@ -142,15 +143,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    height: 100,
+    width: '100%',
     paddingTop: 9,
+    paddingHorizontal: 10,
   },
   navContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 64,
+    justifyContent: 'space-evenly',
+      flexDirection: 'row',
+      alignItems: 'center',
+      height: 64,
   },
   navItem: {
     alignItems: 'center',
@@ -162,9 +163,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   qrContainer: {
+    marginHorizontal: 16,
     alignItems: 'center',
     position: 'relative',
     marginTop: -23,
+    justifyContent: 'center',
   },
   qrButton: {
     width: 56,

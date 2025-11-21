@@ -25,7 +25,7 @@ export default function MyPageNavigation() {
         return {
           header: () => (
             <CommonHeader
-              title="내정보"
+              title="더보기"
               onPressTicket={handlePressApplication}
               onPressStore={() => navigation.getParent()?.navigate('Store')}
             />

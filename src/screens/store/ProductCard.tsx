@@ -48,12 +48,11 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     borderWidth: 1,
     borderRadius: 12,
-    width: 180.5,
-    height: 231.5,
     overflow: 'hidden',
+    width: '100%',
   },
   imageContainer: {
-    height: 162.5,
+    aspectRatio: 1,
     backgroundColor: '#E5E7EB',
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
@@ -66,6 +65,7 @@ const styles = StyleSheet.create({
   infoArea: {
     paddingHorizontal: 12,
     paddingTop: 12,
+    paddingBottom: 12,
   },
   priceRow: {
     marginTop: 2,

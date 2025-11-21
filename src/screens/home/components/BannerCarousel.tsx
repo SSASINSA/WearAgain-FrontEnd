@@ -1,8 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
-import { Text as CustomText } from '../../../components/common/Text';
+import React, {useRef, useCallback, useState} from 'react';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Linking,
+  Alert,
+  LayoutChangeEvent,
+} from 'react-native';
+import {useFocusEffect} from '@react-navigation/native';
+import Carousel, {ICarouselInstance} from 'react-native-reanimated-carousel';
+import {Text as CustomText} from '../../../components/common/Text';
 import SmsIcon from '../../../assets/icons/sms.svg';
 import VolunteerIcon from '../../../assets/icons/volunteerIcon.svg';
+import {useBannerStore} from '../../../store/banner.store';
 
 interface Banner {
   id: number;
@@ -10,198 +20,278 @@ interface Banner {
   buttonText: string;
   backgroundColor: string;
   icon: 'sms' | 'volunteer';
+  link?: string;
 }
 
 interface BannerCarouselProps {
-  banners: Banner[];
+  banners?: Banner[];
   autoSwipeInterval?: number;
   userInteractionDelay?: number;
 }
 
-const AUTO_SWIPE_INTERVAL = 3000;
-const USER_INTERACTION_DELAY = 3000;
-const INFINITE_BANNERS_REPEAT_COUNT = 100;
+const AUTO_SWIPE_INTERVAL = 2500;
+const USER_INTERACTION_DELAY = 2000;
 
-export const BannerCarousel: React.FC<BannerCarouselProps> = ({ 
-  banners, 
+const DEFAULT_BANNERS: Banner[] = [
+  {
+    id: 1,
+    title: '환경 뉴스레터',
+    buttonText: '보러가기',
+    backgroundColor: '#642C8D',
+    icon: 'sms' as const,
+    link: 'https://page.stibee.com/archives/69943',
+  },
+  {
+    id: 2,
+    title: '당신의 마음을 입히세요',
+    buttonText: '응원하기',
+    backgroundColor: '#E27931',
+    icon: 'volunteer' as const,
+    link: 'https://box.donus.org/box/wearagain/saveclothes?_ga=2.168483685.557985844.1678075479-710762688.1676980328',
+  },
+];
+
+export const BannerCarousel: React.FC<BannerCarouselProps> = ({
+  banners = DEFAULT_BANNERS,
   autoSwipeInterval = AUTO_SWIPE_INTERVAL,
-  userInteractionDelay = USER_INTERACTION_DELAY 
+  userInteractionDelay = USER_INTERACTION_DELAY,
 }) => {
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const [isUserInteracting, setIsUserInteracting] = useState(false);
-  const scrollViewRef = useRef<ScrollView>(null);
-  const screenWidth = Dimensions.get('window').width - 32;
+  const carouselRef = useRef<ICarouselInstance>(null);
+  const resumeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(true);
 
-  const createInfiniteBanners = (): Banner[] => {
-    const repeatedBanners: Banner[] = [];
-    for (let i = 0; i < INFINITE_BANNERS_REPEAT_COUNT; i++) {
-      repeatedBanners.push(...banners);
+  const {
+    isUserInteracting,
+    setIsUserInteracting,
+  } = useBannerStore();
+
+  const bannerWidth = containerWidth;
+  const itemWidth = bannerWidth + 16; // 배너 너비 + 간격
+
+  const handleContainerLayout = useCallback((event: LayoutChangeEvent) => {
+    const {width} = event.nativeEvent.layout;
+    if (width > 0 && width !== containerWidth) {
+      setContainerWidth(width);
     }
-    return repeatedBanners;
-  };
+  }, [containerWidth]);
 
-  const infiniteBanners = createInfiniteBanners();
-  const startIndex = Math.floor(infiniteBanners.length / 2);
-  const [currentScrollIndex, setCurrentScrollIndex] = useState(startIndex);
+  useFocusEffect(
+    useCallback(() => {
+      setIsUserInteracting(false);
+      setIsAutoPlayEnabled(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (scrollViewRef.current) {
-        const initialScrollX = startIndex * (screenWidth + 16);
-        scrollViewRef.current.scrollTo({
-          x: initialScrollX,
-          animated: false,
-        });
+      if (resumeTimerRef.current) {
+        clearTimeout(resumeTimerRef.current);
       }
-    }, 100);
 
-    return () => clearTimeout(timer);
-  }, []);
+      return () => {
+        if (resumeTimerRef.current) {
+          clearTimeout(resumeTimerRef.current);
+          resumeTimerRef.current = null;
+        }
+      };
+    }, [setIsUserInteracting])
+  );
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!isUserInteracting && scrollViewRef.current) {
-        setCurrentBannerIndex((prevIndex) => {
-          const nextIndex = (prevIndex + 1) % banners.length;
-          return nextIndex;
-        });
-        
-        setCurrentScrollIndex((prevScrollIndex) => {
-          const nextScrollIndex = prevScrollIndex + 1;
-          const nextScrollX = nextScrollIndex * (screenWidth + 16);
-          
-          scrollViewRef.current?.scrollTo({
-            x: nextScrollX,
-            animated: true,
-          });
-          
-          return nextScrollIndex;
-        });
-      }
-    }, autoSwipeInterval);
+  const handleSnapToItem = useCallback((index: number) => {
+    setActiveIndex(index);
 
-    return () => clearInterval(interval);
-  }, [screenWidth, banners.length, isUserInteracting, autoSwipeInterval]);
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+    }
+
+    resumeTimerRef.current = setTimeout(() => {
+      setIsUserInteracting(false);
+      setIsAutoPlayEnabled(true);
+    }, userInteractionDelay);
+  }, [setIsUserInteracting, userInteractionDelay]);
 
   const renderBannerIcon = (icon: string) => {
     switch (icon) {
       case 'sms':
-        return <SmsIcon width={20} height={20} style={styles.newsletterIcons} />;
+        return <SmsIcon width={20} height={20} style={styles.bannerIcon} />;
       case 'volunteer':
-        return <VolunteerIcon width={20} height={20} style={styles.newsletterIcons} />;
+        return <VolunteerIcon width={20} height={20} style={styles.bannerIcon} />;
       default:
         return null;
     }
   };
 
-  return (
-    <View style={styles.bannerContainer}>
-      <ScrollView
-        ref={scrollViewRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.swiper}
-        contentOffset={{ x: startIndex * (screenWidth + 16), y: 0 }}
-        snapToInterval={screenWidth + 16}
-        snapToAlignment="start"
-        decelerationRate="fast"
-        onScrollBeginDrag={() => {
-          setIsUserInteracting(true);
-        }}
-        onMomentumScrollEnd={(event) => {
-          const scrollX = event.nativeEvent.contentOffset.x;
-          const index = Math.round(scrollX / (screenWidth + 16));
-          const actualIndex = index % banners.length;
-          
-          setCurrentBannerIndex(actualIndex);
-          setCurrentScrollIndex(index);
-          
-          setTimeout(() => {
-            setIsUserInteracting(false);
-          }, userInteractionDelay);
-        }}
-        scrollEventThrottle={16}
-      >
-        {infiniteBanners.map((banner, index) => (
-          <View 
-            key={`${banner.id}-${index}`}
-            style={[
-              styles.newsletterBanner, 
-              {
-                backgroundColor: banner.backgroundColor,
-                width: screenWidth,
-                marginRight: 16,
-              }
-            ]}
-          >
-            <View style={styles.newsletterContent}>
-              <View style={styles.newsletterIcons}>
-                {renderBannerIcon(banner.icon)}
-              </View>
-              <CustomText variant="headlineM" color="#FFFFFF" style={styles.newsletterText}>
-                {banner.title}
-              </CustomText>
-              <TouchableOpacity style={styles.newsletterButton}>
-                <CustomText variant="labelM" color={banner.backgroundColor} weight="semiBold" align="center">
-                  {banner.buttonText}
-                </CustomText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+  const handleBannerPress = async (link?: string) => {
+    if (!link) {
+      return;
+    }
 
-      {/* 배너 인디케이터 */}
-      <View style={styles.bannerIndicator}>
-        {banners.map((_, index) => (
-          <View 
-            key={index}
-            style={[
-              styles.indicatorDot, 
-              currentBannerIndex === index ? styles.activeDot : styles.inactiveDot
-            ]} 
+    try {
+      const canOpen = await Linking.canOpenURL(link);
+      if (canOpen) {
+        await Linking.openURL(link);
+      } else {
+        Alert.alert('오류', '링크를 열 수 없습니다.');
+      }
+    } catch (error) {
+      Alert.alert('오류', '링크를 열 수 없습니다.');
+    }
+  };
+
+  const handleTouchStart = useCallback(() => {
+    setIsUserInteracting(true);
+    setIsAutoPlayEnabled(false);
+
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+    }
+  }, [setIsUserInteracting]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+    }
+
+    resumeTimerRef.current = setTimeout(() => {
+      setIsUserInteracting(false);
+      setIsAutoPlayEnabled(true);
+    }, userInteractionDelay);
+  }, [setIsUserInteracting, userInteractionDelay]);
+
+  const renderBannerItem = useCallback(
+    ({item}: {item: Banner}) => {
+      return (
+        <View
+          style={[
+            styles.bannerItem,
+            {
+              backgroundColor: item.backgroundColor,
+              width: bannerWidth,
+            },
+          ]}>
+          <View style={styles.bannerContent}>
+            <View style={styles.bannerIcon}>
+              {renderBannerIcon(item.icon)}
+            </View>
+            <CustomText
+              variant="headlineM"
+              color="#FFFFFF"
+              style={styles.bannerText}>
+              {item.title}
+            </CustomText>
+            <TouchableOpacity
+              style={styles.bannerButton}
+              onPress={() => handleBannerPress(item.link)}
+              activeOpacity={0.8}>
+              <CustomText
+                variant="labelM"
+                color={item.backgroundColor}
+                weight="semiBold"
+                align="center">
+                {item.buttonText}
+              </CustomText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    },
+    [bannerWidth]
+  );
+
+  return (
+    <View 
+      style={styles.bannerContainer}
+      onLayout={handleContainerLayout}>
+      {containerWidth > 0 && banners.length > 0 && (
+        <>
+          <View
+            style={styles.carouselSection}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}>
+            <Carousel
+              ref={carouselRef}
+              data={banners}
+              renderItem={renderBannerItem}
+              width={itemWidth}
+              height={62}
+              loop={true}
+              autoPlay={isAutoPlayEnabled && !isUserInteracting}
+              autoPlayInterval={autoSwipeInterval}
+              onSnapToItem={handleSnapToItem}
+              scrollAnimationDuration={600}
+              style={styles.carousel}
+            />
+          </View>
+
+          <BannerIndicator
+            banners={banners}
+            activeIndex={activeIndex}
           />
-        ))}
-      </View>
+        </>
+      )}
     </View>
   );
 };
+
+interface BannerIndicatorProps {
+  banners: Banner[];
+  activeIndex: number;
+}
+
+const BannerIndicator = React.memo<BannerIndicatorProps>(
+  ({banners, activeIndex}) => {
+    return (
+      <View style={styles.bannerIndicator}>
+        {banners.map((banner, index) => (
+          <View
+            key={banner.id}
+            style={[
+              styles.indicatorDot,
+              activeIndex === index ? styles.activeDot : styles.inactiveDot,
+            ]}
+          />
+        ))}
+      </View>
+    );
+  }
+);
+
+BannerIndicator.displayName = 'BannerIndicator';
 
 const styles = StyleSheet.create({
   bannerContainer: {
     marginTop: 16,
     marginHorizontal: 16,
-    height: 'auto',
-    borderRadius: 3,
-    overflow: 'hidden',
   },
-  swiper: {
+  carouselSection: {
     height: 62,
+    width: '100%',
   },
-  newsletterBanner: {
+  carousel: {
+    width: '100%',
+  },
+  bannerItem: {
     borderRadius: 3,
     padding: 16,
     height: 62,
     flex: 1,
     justifyContent: 'center',
   },
-  newsletterContent: {
+  bannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     height: '100%',
   },
-  newsletterIcons: {
+  bannerIcon: {
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 10,
   },
-  newsletterText: {
+  bannerText: {
     flex: 1,
     fontSize: 18,
     fontWeight: '400',
     marginLeft: 10,
   },
-  newsletterButton: {
+  bannerButton: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 0,

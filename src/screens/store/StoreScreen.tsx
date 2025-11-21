@@ -1,5 +1,5 @@
-import React, {useCallback, useMemo} from 'react';
-import {FlatList, View, StyleSheet} from 'react-native';
+import React from 'react';
+import {ScrollView, View, StyleSheet} from 'react-native';
 import {Text} from '../../components/common/Text';
 import ProductCard from './ProductCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,13 +33,6 @@ export default function StoreScreen() {
       },
     ];
 
-  const renderItem = useCallback(
-    ({item}: {item: {id: string; name: string; price: number; image: any}}) => (
-      <ProductCard product={item} />
-    ),
-    [],
-  );
-
   if (!products.length) {
     return (
       <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
@@ -53,15 +46,18 @@ export default function StoreScreen() {
       {/* 헤더 영역 */}
       <StoreHeader credit={99999} />
 
-      <FlatList
-        data={products}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        numColumns={2}
-        columnWrapperStyle={styles.gridRow}
+      <ScrollView
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
-      />
+      >
+        <View style={styles.gridContainer}>
+          {products.map(product => (
+            <View key={product.id} style={styles.itemWrapper}>
+              <ProductCard product={product} />
+            </View>
+          ))}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -72,13 +68,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F2',
   },
   listContainer: {
+    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 24,
-    rowGap: 16,
-    alignItems: 'center',
   },
-  gridRow: {
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
-    justifyContent: 'center',
+  },
+  itemWrapper: {
+    flex: 1,
+    minWidth: '40%',
+    maxWidth: '48%',
   },
 });

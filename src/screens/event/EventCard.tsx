@@ -3,15 +3,11 @@ import {
   View,
   Image,
   StyleSheet,
-  Dimensions,
   TouchableOpacity,
 } from 'react-native';
 import {Text} from '../../components/common/Text';
 import CalendarIcon from '../../assets/icons/eventCalendarIcon.svg';
-import LocationIcon from '../../assets/icons/eventLocationIcon.svg';
-
-const {width: screenWidth} = Dimensions.get('window');
-const cardWidth = screenWidth - 32; 
+import LocationIcon from '../../assets/icons/eventLocationIcon.svg'; 
 
 interface EventCardProps {
   title: string;
@@ -105,7 +101,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    width: cardWidth,
+    width: '100%',
     height: 356,
     overflow: 'hidden',
     marginVertical: 8,
