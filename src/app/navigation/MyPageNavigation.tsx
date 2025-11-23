@@ -1,6 +1,6 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import PlaceholderScreen from '../../screens/PlaceholderScreen';
+import MyPageScreen from '../../screens/mypage/MyPageScreen';
 import CommonHeader from '../../components/common/CommonHeader';
 
 const Stack = createNativeStackNavigator();
@@ -33,7 +33,7 @@ export default function MyPageNavigation() {
         };
       }}
     >
-      <Stack.Screen name="MyPage" component={PlaceholderScreen} />
+      <Stack.Screen name="MyPage" component={MyPageScreen} />
     </Stack.Navigator>
   );
 }
