@@ -1,4 +1,5 @@
 import React from 'react';
+import {apiClient} from '../../api/client';
 import {
   View,
   StyleSheet,
@@ -16,6 +17,38 @@ import {Text} from '../../components/common/Text';
 import DetailHeader from '../../components/common/DetailHeader';
 import RankingIcon from '../../assets/icons/ranking.svg';
 import ScissorsIcon from '../../assets/icons/scissors.svg';
+
+// API 응답 타입 정의
+interface MascotStatus {
+  level: number;
+  exp: number;
+  nextLevelExp: number;
+  magicScissorCount: number;
+  cycles: number;
+}
+
+interface ImpactStatus {
+  co2Saved: number;
+  waterSaved: number;
+  energySaved: number;
+}
+
+interface RewardStatus {
+  rewardGranted: boolean;
+  credit: number;
+}
+
+// 초기 상태 조회 응답
+interface GrowthStatusResponse {
+  mascot: MascotStatus;
+  impact: ImpactStatus;
+}
+
+// 가위 사용 API 응답
+interface MagicScissorsUseResponse {
+  mascot: MascotStatus;
+  reward: RewardStatus;
+}
 
 const {width: screenWidth} = Dimensions.get('window');
 
@@ -52,8 +85,14 @@ export default function GrowingScreen() {
   const [currentCharacter, setCurrentCharacter] = React.useState('idle');
   const [currentLevel, setCurrentLevel] = React.useState(1);
   const [currentExp, setCurrentExp] = React.useState(0);
-  const [currentRepairs, setCurrentRepairs] = React.useState(30);
+  const [nextLevelExp, setNextLevelExp] = React.useState(100);
+  const [currentRepairs, setCurrentRepairs] = React.useState(0);
   const [isAnimating, setIsAnimating] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [co2Saved, setCo2Saved] = React.useState(0);
+  const [waterSaved, setWaterSaved] = React.useState(0);
+  const [energySaved, setEnergySaved] = React.useState(0);
+  
   const scissorsAnimX = React.useRef(new Animated.Value(0)).current;
   const scissorsAnimY = React.useRef(new Animated.Value(0)).current;
   const scissorsOpacity = React.useRef(new Animated.Value(0)).current;
@@ -63,12 +102,51 @@ export default function GrowingScreen() {
   const progressAnimValue = React.useRef(new Animated.Value(0)).current;
   const [showLevelUpModal, setShowLevelUpModal] = React.useState(false);
   const [levelUpReward, setLevelUpReward] = React.useState({ level: 0, credit: 0 });
+  
+  // Debouncing을 위한 누적 사용 개수 및 타이머
+  const pendingUseCount = React.useRef(0);
+  const debouncedApiCallTimeout = React.useRef<NodeJS.Timeout>();
 
   React.useEffect(() => {
     navigation.setOptions({
       headerShown: false,
     } as any);
   }, [navigation]);
+
+  // 초기 데이터 로드
+  React.useEffect(() => {
+    const loadGrowthStatus = async () => {
+      try {
+        const response = await apiClient.get<GrowthStatusResponse>('/growth/status');
+        const data = response.data;
+        
+        // mascot 데이터 확인
+        if (data?.mascot) {
+          setCurrentLevel(data.mascot.level ?? 1);
+          setCurrentExp(data.mascot.exp ?? 0);
+          setNextLevelExp(data.mascot.nextLevelExp ?? 100);
+          setCurrentRepairs(data.mascot.magicScissorCount ?? 0);
+          
+          // progressBar 초기값 설정
+          progressAnimValue.setValue(data.mascot.exp ?? 0);
+        }
+        
+        // impact 데이터 확인
+        if (data?.impact) {
+          setCo2Saved(data.impact.co2Saved ?? 0);
+          setWaterSaved(data.impact.waterSaved ?? 0);
+          setEnergySaved(data.impact.energySaved ?? 0);
+        }
+      } catch (error) {
+        console.error('성장 상태 조회 실패:', error);
+        Alert.alert('오류', '성장 상태를 불러올 수 없습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadGrowthStatus();
+  }, [progressAnimValue]);
 
   // 호버 애니메이션 (위아래로 약간씩 반복 이동)
   React.useEffect(() => {
@@ -131,7 +209,7 @@ const playScissorsAnimation = (onComplete?: () => void) => {
       }),
       Animated.spring(scissorsScale, {
         toValue: 1,
-        speed: 12,
+        speed: 24,
         bounciness: 8,
         useNativeDriver: true,
       }),
@@ -175,86 +253,112 @@ const playScissorsAnimation = (onComplete?: () => void) => {
   ]).start(onComplete);
 };
 
-  const lastRepairTime = React.useRef(0);
-  
-  const handleRepairPress = () => {
-    // Debouncing: 마지막 수선으로부터 500ms 이상 경과해야 함
-    const now = Date.now();
-    if (now - lastRepairTime.current < 500) return;
-    lastRepairTime.current = now;
-    
-    if (isAnimating || currentRepairs <= 0) return;
+  // 누적된 사용 개수로 API 호출
+  const executeRepairApi = async (useCount: number) => {
+    if (useCount <= 0) return;
 
     setIsAnimating(true);
     
-    // EXP 35 증가 및 레벨 업 로직
-    let newExp = currentExp + 35;
-    let newLevel = currentLevel;
-    let isLeveledUp = false;
-
-    // 100 이상의 EXP가 있는 동안 레벨 업
-    while (newExp >= 100) {
-      newLevel += 1;
-      newExp -= 100;
-      isLeveledUp = true;
-    }
-
-    // progressBar 애니메이션 시작
-    if (isLeveledUp) {
-      // 레벨업이 있는 경우: 100까지 올라갔다가 새 EXP로 리셋
-      Animated.sequence([
-        // 1단계: 100까지 올라가기
-        Animated.timing(progressAnimValue, {
-          toValue: 100,
-          duration: 600,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: false,
-        }),
-        // 2단계: 리셋 (즉시)
-        Animated.timing(progressAnimValue, {
-          toValue: 0,
-          duration: 0,
-          useNativeDriver: false,
-        }),
-        // 3단계: 새 EXP까지 차오르기
+    try {
+      // 1. 서버에 가위 사용 요청 (누적 개수 전송)
+      const response = await apiClient.post<MagicScissorsUseResponse>('/growth/magic-scissors/use', {
+        useCount: useCount,
+      });
+      const updatedData = response.data;
+      
+      // 2. 서버에서 받은 데이터로 상태 업데이트
+      const newLevel = updatedData.mascot.level;
+      const newExp = updatedData.mascot.exp;
+      const newRepairs = updatedData.mascot.magicScissorCount;
+      const isLeveledUp = updatedData.reward.rewardGranted; // reward.rewardGranted로 레벨업 판정
+      
+      // 3. progressBar 애니메이션 시작
+      if (isLeveledUp) {
+        // 레벨업이 있는 경우: nextLevelExp까지 올라갔다가 새 EXP로 리셋
+        Animated.sequence([
+          // 1단계: nextLevelExp까지 올라가기 (현재 nextLevelExp 값 기준)
+          Animated.timing(progressAnimValue, {
+            toValue: nextLevelExp,
+            duration: 600,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: false,
+          }),
+          // 2단계: 리셋 (즉시)
+          Animated.timing(progressAnimValue, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: false,
+          }),
+          // 3단계: 새 EXP까지 차오르기
+          Animated.timing(progressAnimValue, {
+            toValue: newExp,
+            duration: 600,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: false,
+          }),
+        ]).start();
+      } else {
+        // 레벨업이 없는 경우: 단순히 새 EXP까지 올라가기
         Animated.timing(progressAnimValue, {
           toValue: newExp,
-          duration: 600,
+          duration: 800,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: false,
-        }),
-      ]).start();
-    } else {
-      // 레벨업이 없는 경우: 단순히 새 EXP까지 올라가기
-      Animated.timing(progressAnimValue, {
-        toValue: newExp,
-        duration: 800,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }).start();
+        }).start();
+      }
+
+      // 레벨업 정보 캡처 (콜백에서 사용하기 위해)
+      const rewardCredit = updatedData.reward.credit;
+
+      setCurrentExp(newExp);
+      setCurrentLevel(newLevel);
+      setCurrentRepairs(newRepairs);
+      setNextLevelExp(updatedData.mascot.nextLevelExp ?? nextLevelExp);
+      
+      // 표정을 happy로 변경
+      setCurrentCharacter('happy');
+      
+      // 가위 애니메이션 재생 (완료 후 idle로 복귀)
+      playScissorsAnimation(() => {
+        setIsAnimating(false);
+        // 애니메이션 완료 후 500ms 후 idle로 복귀
+        setTimeout(() => {
+          setCurrentCharacter('idle');
+          
+          // 레벨업 여부에 따라 팝업 표시
+          if (isLeveledUp) {
+            setLevelUpReward({ level: newLevel, credit: rewardCredit });
+            setShowLevelUpModal(true);
+          }
+        }, 500);
+      });
+    } catch (error) {
+      console.error('수선 실패:', error);
+      Alert.alert('오류', '수선에 실패했습니다.');
+      setIsAnimating(false);
+    }
+  };
+
+  // 즉시 실행되는 수선 버튼 핸들러 (debouncing 포함)
+  const handleRepairPress = () => {
+    if (isAnimating || currentRepairs <= 0) return;
+
+    // 1. 사용 개수 누적
+    pendingUseCount.current += 1;
+
+    // 2. 기존 타이머 취소
+    if (debouncedApiCallTimeout.current) {
+      clearTimeout(debouncedApiCallTimeout.current);
     }
 
-    setCurrentExp(newExp);
-    setCurrentLevel(newLevel);
-    setCurrentRepairs(currentRepairs - 1);
-    
-    // 표정을 happy로 변경
-    setCurrentCharacter('happy');
-    
-    // 가위 애니메이션 재생 (완료 후 idle로 복귀)
-    playScissorsAnimation(() => {
-      setIsAnimating(false);
-      // 애니메이션 완료 후 2초 후 idle로 복귀
-      setTimeout(() => {
-        setCurrentCharacter('idle');
-        
-        // 레벨업 여부에 따라 팝업 표시
-        if (isLeveledUp) {
-          setLevelUpReward({ level: newLevel, credit: 100 });
-          setShowLevelUpModal(true);
-        }
-      }, 500);
-    });
+    // 3. 새 타이머 설정 (500ms 후 API 호출)
+    debouncedApiCallTimeout.current = setTimeout(() => {
+      const useCount = pendingUseCount.current;
+      pendingUseCount.current = 0; // 리셋
+      
+      // API 호출
+      executeRepairApi(useCount);
+    }, 500);
   };
 
   const handleRankingPress = () => {
@@ -283,7 +387,7 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                     CO2 절감
                   </Text>
                   <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
-                    20kg
+                    {co2Saved}kg
                   </Text>
                 </View>
 
@@ -294,7 +398,7 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                     물 절감
                   </Text>
                   <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
-                    35.4L
+                    {waterSaved}L
                   </Text>
                 </View>
 
@@ -305,7 +409,7 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                     에너지 절감
                   </Text>
                   <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
-                    12.6KWh
+                    {energySaved}KWh
                   </Text>
                 </View>
               </View>
@@ -446,7 +550,7 @@ const playScissorsAnimation = (onComplete?: () => void) => {
 
                   <View style={styles.levelTextContainer}>
                     <Text variant="bodyM" color="#6B7280">다음 레벨까지</Text>
-                    <Text variant="bodyM" color="#06b0b7">{currentExp}/100 EXP</Text>
+                    <Text variant="bodyM" color="#06b0b7">{currentExp}/{nextLevelExp} EXP</Text>
                   </View>
                 </View>
                 
@@ -458,7 +562,7 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                           styles.progressBarFill,
                           {
                             width: progressAnimValue.interpolate({
-                              inputRange: [0, 100],
+                              inputRange: [0, nextLevelExp],
                               outputRange: ['0%', '100%'],
                             }),
                           },
