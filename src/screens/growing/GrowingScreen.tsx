@@ -381,34 +381,43 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                 {/* CO2 절감 */}
                 <View style={styles.statItem}>
                   <Image source={imgCo2Icon} style={styles.statIcon} />
-                  <Text variant="bodyS" color="#888888" align="center" style={styles.statLabel}>
+                  <Text variant="bodyS2" color="#888888" align="center" style={styles.statLabel}>
                     CO2 절감
                   </Text>
-                  <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
-                    {co2Saved}kg
-                  </Text>
+                  <View style={styles.statValueContainer}>
+                    <Text variant="headlineM" color="#333333" align="center" weight="bold">
+                      {Math.round(co2Saved * 100) / 100}
+                    </Text>
+                    <Text variant="bodyS2" color="#888888" style={styles.unitText}>kg</Text>
+                  </View>
                 </View>
 
                 {/* 물 절감 */}
                 <View style={styles.statItem}>
                   <Image source={imgWaterIcon} style={styles.statIcon} />
-                  <Text variant="bodyS" color="#888888" align="center" style={styles.statLabel}>
+                  <Text variant="bodyS2" color="#888888" align="center" style={styles.statLabel}>
                     물 절감
                   </Text>
-                  <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
-                    {waterSaved}L
-                  </Text>
+                  <View style={styles.statValueContainer}>
+                    <Text variant="headlineM" color="#333333" align="center" weight="bold">
+                      {Math.round(waterSaved * 100) / 100}
+                    </Text>
+                    <Text variant="bodyS2" color="#888888" style={styles.unitText}>L</Text>
+                  </View>
                 </View>
 
                 {/* 에너지 절감 */}
                 <View style={styles.statItem}>
                   <Image source={imgEnergyIcon} style={styles.statIcon} />
-                  <Text variant="bodyS" color="#888888" align="center" style={styles.statLabel}>
+                  <Text variant="bodyS2" color="#888888" align="center" style={styles.statLabel}>
                     에너지 절감
                   </Text>
-                  <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
-                    {energySaved}KWh
-                  </Text>
+                  <View style={styles.statValueContainer}>
+                    <Text variant="headlineM" color="#333333" align="center" weight="bold">
+                      {Math.round(energySaved * 100) / 100}
+                    </Text>
+                    <Text variant="bodyS2" color="#888888" style={styles.unitText}>kWh</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -669,7 +678,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginTop: 24,
     marginBottom: 2,
-    paddingVertical: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 0,
     borderWidth: 4,
     borderColor: '#D5F5D0',
     backgroundColor: '#FFFFFF',
@@ -683,12 +693,14 @@ const styles = StyleSheet.create({
     elevation: 8,
     minHeight: 120,
     maxHeight: 140,
+    justifyContent: 'center',
   },
   statsContent: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 0,
     flex: 1,
   },
   statItem: {
@@ -702,10 +714,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   statLabel: {
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  statValue: {
+  statValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
     marginTop: 2,
+    gap: 2,
+  },
+  unitText: {
+    marginBottom: 1,
   },
   dialogueCard: {
     backgroundColor: '#FFFFFF',
