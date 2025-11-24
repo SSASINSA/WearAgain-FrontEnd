@@ -18,6 +18,8 @@ import DetailHeader from '../../components/common/DetailHeader';
 import RankingIcon from '../../assets/icons/ranking.svg';
 import ScissorsIcon from '../../assets/icons/scissors.svg';
 
+const imgShadow = require('../../assets/images/growing/shadow.png');
+
 // API 응답 타입 정의
 interface MascotStatus {
   level: number;
@@ -65,7 +67,7 @@ const characterKeys = ['idle', 'sad', 'tired', 'curious'];
 // 캐릭터 상태별 대사
 const characterDialogues = {
   idle: '안녕! 오늘 뭔가 재미있는 일이 있을까?\n 나랑 얘기하자~',
-  happy: '오오! 수선이 정말 잘되네!\n고마워!',
+  happy: '오오! 수선이 정말 잘 됐어!\n고마워!',
   sad: '다른 옷이 버려지는 것을 봐버렸어.\n너무 슬퍼. ㅠ.ㅠ',
   tired: '정말 힘든 요즘이야.\n그래도 이겨낼 수 있을 거야.',
   curious: '내가 환경을 위해서\n할 수 있는 일이 더 없을까?',
@@ -74,11 +76,7 @@ const characterDialogues = {
 const imgCo2Icon = require('../../assets/icons/co2.png');
 const imgWaterIcon = require('../../assets/icons/water_drop.png');
 const imgEnergyIcon = require('../../assets/icons/energy.png');
-const imgPolygon1 = 'http://localhost:3845/assets/50e5f50a7a47a98365899d337357dd1d1bd543cd.svg';
-const imgFrame = 'http://localhost:3845/assets/52578f4e2fc4b3c22e2317defbc9cc3cd9e1b6bd.svg';
-const imgDiv = 'http://localhost:3845/assets/06bf3123962fa4cb90ef2887e2273d8af2e9f15d.svg';
 const imgEllipse1 = 'http://localhost:3845/assets/a0e9a6afb2be9a36ddb0883ba49c5206fe2479a4.svg';
-const imgFrame1 = 'http://localhost:3845/assets/b0ef03a51c1a695fc2d0d8863ff11172d945bc8d.svg';
 
 export default function GrowingScreen() {
   const navigation = useNavigation();
@@ -497,26 +495,27 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                   {
                     transform: [
                       {
+                        scaleX: hoverAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.88, 0.78],
+                        }),
+                      },
+                      {
                         scaleY: hoverAnim.interpolate({
                           inputRange: [0, 1],
-                          outputRange: [0.6, 1],
+                          outputRange: [0.88, 0.78],
                         }),
                       },
                     ],
                     opacity: hoverAnim.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [0.4, 0.6],
+                      outputRange: [0.7, 0.45],
                     }),
                   },
                 ]}
               >
-                <View style={styles.shadowEllipse} />
+                <Image source={imgShadow} style={styles.shadowImage} />
               </Animated.View>
-
-              {/* 캐릭터 이름 배경 */}
-              <View style={styles.characterNameContainer}>
-                <Image source={{uri: imgEllipse1}} style={styles.characterNameBackground} />
-              </View>
             </TouchableOpacity>
           </View>
 
@@ -682,27 +681,31 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 25,
     elevation: 8,
+    minHeight: 120,
+    maxHeight: 140,
   },
   statsContent: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingHorizontal: 24,
+    flex: 1,
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
+    justifyContent: 'center',
   },
   statIcon: {
     width: 32,
     height: 32,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   statLabel: {
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statValue: {
-    marginTop: 4,
+    marginTop: 2,
   },
   dialogueCard: {
     backgroundColor: '#FFFFFF',
@@ -759,14 +762,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   shadowContainer: {
-    marginTop: -4,
+    marginTop: -26,
     marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  shadowEllipse: {
+  shadowImage: {
     width: 120,
-    height: 20,
-    borderRadius: 60,
-    backgroundColor: '#D1D5DB',
+    height: 72,
+    resizeMode: 'contain',
   },
   modalOverlay: {
     position: 'absolute',
@@ -789,7 +793,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000000',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 4,
     },
     shadowOpacity: 0.2,
     shadowRadius: 25,
@@ -848,7 +852,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#06b0b7',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 2,
   },
   actionButtonLabel: {
     fontSize: 12,
@@ -857,17 +861,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginHorizontal: 24,
-    marginBottom: 8,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#F3F4F6',
     position: 'relative',
     overflow: 'visible',
-    minHeight: 140,
   },
   levelContent: {
     position: 'relative',
-    paddingVertical: 20,
-    paddingHorizontal: 21,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
   },
   levelTopContainer: {
     flexDirection: 'row',
@@ -883,10 +886,12 @@ const styles = StyleSheet.create({
   },
   progressBarWrapper: {
     position: 'relative',
-    paddingTop: 4,
+    paddingTop: 0,
+    marginBottom: 4,
   },
   progressBarContainer: {
-    marginBottom: 0,
+    marginTop: 12,
+    marginBottom: 2,
   },
   progressBarBackground: {
     height: 12,
@@ -908,7 +913,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   repairButton: {
-    marginTop: 20,
+    marginTop: 8,
     width: '100%',
   },
   repairButtonGradient: {
