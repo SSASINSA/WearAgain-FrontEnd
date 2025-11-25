@@ -385,7 +385,7 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                     CO2 절감
                   </Text>
                   <View style={styles.statValueContainer}>
-                    <Text variant="headlineM" color="#333333" align="center" weight="bold">
+                    <Text variant="headlineS" color="#333333" align="center" weight="bold">
                       {Math.round(co2Saved * 100) / 100}
                     </Text>
                     <Text variant="bodyS2" color="#888888" style={styles.unitText}>kg</Text>
@@ -399,7 +399,7 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                     물 절감
                   </Text>
                   <View style={styles.statValueContainer}>
-                    <Text variant="headlineM" color="#333333" align="center" weight="bold">
+                    <Text variant="headlineS" color="#333333" align="center" weight="bold">
                       {Math.round(waterSaved * 100) / 100}
                     </Text>
                     <Text variant="bodyS2" color="#888888" style={styles.unitText}>L</Text>
@@ -413,7 +413,7 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                     에너지 절감
                   </Text>
                   <View style={styles.statValueContainer}>
-                    <Text variant="headlineM" color="#333333" align="center" weight="bold">
+                    <Text variant="headlineS" color="#333333" align="center" weight="bold">
                       {Math.round(energySaved * 100) / 100}
                     </Text>
                     <Text variant="bodyS2" color="#888888" style={styles.unitText}>kWh</Text>

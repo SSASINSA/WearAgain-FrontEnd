@@ -321,7 +321,7 @@ export default function RankingScreen() {
   // 랭킹 변동 상태에 따른 아이콘 및 색상 반환
   const getRankChangeDisplay = (rankChange?: number) => {
     if (rankChange === undefined || rankChange === 0) {
-      return { icon: '→', color: '#9CA3AF', label: '유지' };
+      return { icon: '-', color: '#9CA3AF', label: '-' };
     } else if (rankChange > 0) {
       return { icon: '↑', color: '#10B981', label: `+${rankChange}` };
     } else {
@@ -374,6 +374,9 @@ export default function RankingScreen() {
           {/* 2등 */}
           {topThree[1] && (
             <View style={styles.podiumColumn}>
+              <Text variant="bodyS" color="#9CA3AF" style={styles.repairsAboveBar}>
+                {topThree[1].totalRepairs}회
+              </Text>
               <LinearGradient
                 colors={getPodiumColor(2)}
                 start={{ x: 0, y: 0 }}
@@ -389,15 +392,15 @@ export default function RankingScreen() {
               <Text variant="bodyS" color="#374151" weight="bold" style={styles.podiumName}>
                 {topThree[1].userName}
               </Text>
-              <Text variant="bodyS" color="#9CA3AF">
-                {topThree[1].totalRepairs}회
-              </Text>
             </View>
           )}
 
           {/* 1등 */}
           {topThree[0] && (
             <View style={styles.podiumColumn}>
+              <Text variant="bodyS" color="#9CA3AF" style={styles.repairsAboveBar}>
+                {topThree[0].totalRepairs}회
+              </Text>
               <LinearGradient
                 colors={getPodiumColor(1)}
                 start={{ x: 0, y: 0 }}
@@ -413,15 +416,15 @@ export default function RankingScreen() {
               <Text variant="bodyS" color="#374151" weight="bold" style={styles.podiumName}>
                 {topThree[0].userName}
               </Text>
-              <Text variant="bodyS" color="#9CA3AF">
-                {topThree[0].totalRepairs}회
-              </Text>
             </View>
           )}
 
           {/* 3등 */}
           {topThree[2] && (
             <View style={styles.podiumColumn}>
+              <Text variant="bodyS" color="#9CA3AF" style={styles.repairsAboveBar}>
+                {topThree[2].totalRepairs}회
+              </Text>
               <LinearGradient
                 colors={getPodiumColor(3)}
                 start={{ x: 0, y: 0 }}
@@ -436,9 +439,6 @@ export default function RankingScreen() {
               </LinearGradient>
               <Text variant="bodyS" color="#374151" weight="bold" style={styles.podiumName}>
                 {topThree[2].userName}
-              </Text>
-              <Text variant="bodyS" color="#9CA3AF">
-                {topThree[2].totalRepairs}회
               </Text>
             </View>
           )}
@@ -497,7 +497,7 @@ export default function RankingScreen() {
                 weight="bold"
                 align="center"
               >
-                {item.rank}
+                {item.rank === 1 ? '👑' : item.rank}
               </Text>
             </LinearGradient>
           ) : (
@@ -526,7 +526,10 @@ export default function RankingScreen() {
         {/* 통계 */}
         <View style={styles.statsContainer}>
           <Text variant="bodyS" color="#9CA3AF">
-            수선 {item.totalRepairs}회
+            수선 &nbsp;
+          </Text>
+          <Text variant="bodyS" color="#9CA3AF" style={styles.repairsText}>
+            {item.totalRepairs}회
           </Text>
         </View>
 
@@ -677,6 +680,11 @@ const styles = StyleSheet.create({
   podiumName: {
     marginBottom: 4,
     textAlign: 'center',
+  },
+  repairsAboveBar: {
+    marginBottom: 4,
+    textAlign: 'center',
+    minHeight: 16,
   },
   userCurrentRankCard: {
     backgroundColor: '#FFFFFF',
@@ -838,6 +846,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+    minWidth: 80,
   },
   levelBadge: {
     backgroundColor: '#06b0b7',
@@ -849,7 +858,13 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    justifyContent: 'space-between',
+    marginLeft: 'auto',
+    marginRight: 8,
+    minWidth: 50,
+  },
+  repairsText: {
+    marginLeft: 'auto',
   },
   statItem: {
     flexDirection: 'row',
@@ -864,7 +879,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    marginLeft: 12,
+    marginLeft: 8,
+    marginRight: 0,
     minWidth: 40,
   },
   arrowContainer: {
