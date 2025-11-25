@@ -29,7 +29,7 @@ export default function EventApplicationModal({
   const [memo, setMemo] = useState('');
   const [isOptionDropdownOpen, setIsOptionDropdownOpen] = useState(false);
 
-  const availableOptions = options.filter(option => option.remainingCount > 0);
+  const availableOptions = options.filter(option => (option.remainingCount ?? 0) > 0);
 
   const handleClose = () => {
     setSelectedOption(null);
@@ -58,7 +58,8 @@ export default function EventApplicationModal({
       animationIn="slideInUp"
       animationOut="slideOutDown"
       useNativeDriverForBackdrop
-      hideModalContentWhileAnimating>
+      hideModalContentWhileAnimating
+      avoidKeyboard>
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
           <Text variant="headlineM" color="#111827" style={styles.modalTitle}>
@@ -71,7 +72,10 @@ export default function EventApplicationModal({
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.modalContent} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
           {/* 옵션 선택 */}
           <View style={styles.optionSection}>
             <Text variant="bodyL" color="#111827" style={styles.optionTitle}>

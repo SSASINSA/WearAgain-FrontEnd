@@ -12,8 +12,13 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {Text} from '../../components/common/Text';
 import EventDetailContent from './EventDetailContent';
 import EventApplicationModal from './EventApplicationModal';
+import EventCancelModal from './EventCancelModal';
 import DetailHeader from '../../components/common/DetailHeader';
-import {useEventDetail, useApplyEvent} from '../../hooks/useEvents';
+import {
+  useEventDetail,
+  useApplyEvent,
+  useCancelEventApplication,
+} from '../../hooks/useEvents';
 
 const eventImages = [
   require('../../assets/images/events/event1.jpg'),
@@ -35,7 +40,9 @@ export default function EventDetailScreen() {
   const {eventId} = route.params;
   const {data: event, isLoading, isError} = useEventDetail(eventId);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
   const applyEventMutation = useApplyEvent();
+  const cancelEventMutation = useCancelEventApplication();
 
   const handleApplicationConfirm = (optionId: number, memo: string) => {
     if (!event) {
@@ -97,17 +104,62 @@ export default function EventDetailScreen() {
   }
 
   const availableOptions = event.options.filter(
-    option => option.remainingCount > 0,
+    option => (option.remainingCount ?? 0) > 0,
   );
 
   const eventIndex = parseInt(eventId) - 1;
   const eventImageSource = eventImages[eventIndex % eventImages.length];
 
+  const isUserApplied = event.userApplication?.status === 'APPLIED';
+  const isActionPending =
+    applyEventMutation.isPending || cancelEventMutation.isPending;
+  const isApplyDisabled = !isUserApplied && availableOptions.length === 0;
+
   const getButtonText = () => {
+    if (isUserApplied) {
+      return '신청 취소';
+    }
     if (availableOptions.length === 0) {
       return '신청 마감';
     }
     return '신청하기';
+  };
+
+  const handleCancelApplication = () => {
+    if (!event.userApplication) {
+      Alert.alert('오류', '신청 정보를 불러올 수 없습니다.');
+      return;
+    }
+    setIsCancelModalVisible(true);
+  };
+
+  const handleCancelConfirm = (reason: string) => {
+    if (!event.userApplication) {
+      Alert.alert('오류', '신청 정보를 불러올 수 없습니다.');
+      return;
+    }
+
+    cancelEventMutation.mutate(
+      {
+        applicationId: event.userApplication.applicationId,
+        body: {
+          reason,
+        },
+        eventId: event.id,
+      },
+      {
+        onSuccess: () => {
+          Alert.alert('취소 완료', '이벤트 신청이 취소되었습니다.');
+          setIsCancelModalVisible(false);
+        },
+        onError: (error: any) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            '신청 취소 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+          Alert.alert('취소 실패', errorMessage);
+        },
+      },
+    );
   };
 
   return (
@@ -119,16 +171,19 @@ export default function EventDetailScreen() {
       </ScrollView>
 
       <View style={styles.bottomContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
             styles.applyButton,
-            availableOptions.length === 0 && styles.applyButtonDisabled,
+            isUserApplied && styles.cancelButton,
+            (isApplyDisabled || isActionPending) && styles.applyButtonDisabled,
           ]}
-          onPress={() => setIsModalVisible(true)}
-          disabled={availableOptions.length === 0}>
-          <Text 
-            variant="headlineM" 
-            color={availableOptions.length === 0 ? "#9CA3AF" : "#FFFFFF"} 
+          onPress={
+            isUserApplied ? handleCancelApplication : () => setIsModalVisible(true)
+          }
+          disabled={isApplyDisabled || isActionPending}>
+          <Text
+            variant="headlineM"
+            color={isApplyDisabled ? '#9CA3AF' : '#FFFFFF'}
             style={styles.applyButtonText}>
             {getButtonText()}
           </Text>
@@ -141,6 +196,13 @@ export default function EventDetailScreen() {
         onConfirm={handleApplicationConfirm}
         options={event.options}
         isPending={applyEventMutation.isPending}
+      />
+
+      <EventCancelModal
+        isVisible={isCancelModalVisible}
+        onClose={() => setIsCancelModalVisible(false)}
+        onConfirm={handleCancelConfirm}
+        isPending={cancelEventMutation.isPending}
       />
     </SafeAreaView>
   );
@@ -178,6 +240,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#EF4444',
   },
   applyButtonDisabled: {
     backgroundColor: '#F3F4F6',

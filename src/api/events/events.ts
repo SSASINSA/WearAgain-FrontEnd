@@ -35,10 +35,23 @@ export type EventOptionResponse = {
   name: string;
   type: string;
   displayOrder: number;
-  capacity: number;
-  appliedCount: number;
-  remainingCount: number;
+  capacity: number | null;
+  appliedCount: number | null;
+  remainingCount: number | null;
   children: EventOptionResponse[];
+};
+
+export type EventApplicationTrailResponse = {
+  eventOptionId: number;
+  name: string;
+  type: string;
+};
+
+export type EventUserApplicationResponse = {
+  applicationId: number;
+  status: string;
+  appliedAt: string;
+  optionTrail: EventApplicationTrailResponse[];
 };
 
 export type EventDetailResponse = {
@@ -53,6 +66,7 @@ export type EventDetailResponse = {
   status: string;
   images: EventImageResponse[];
   options: EventOptionResponse[];
+  userApplication?: EventUserApplicationResponse | null;
 };
 
 const BASE_PATH = '/events';
@@ -65,6 +79,15 @@ export type ApplyEventRequest = {
 export type ApplyEventResponse = {
   applicationId: string;
   eventId: number;
+};
+
+export type CancelEventApplicationRequest = {
+  reason: string;
+};
+
+export type CancelEventApplicationResponse = {
+  applicationId: number;
+  status: string;
 };
 
 export const eventsApi = {
@@ -85,6 +108,17 @@ export const eventsApi = {
   async applyEvent(eventId: number, body: ApplyEventRequest) {
     const {data} = await apiClient.post<ApplyEventResponse>(
       `${BASE_PATH}/${eventId}/apply`,
+      body,
+    );
+    return data;
+  },
+
+  async cancelEventApplication(
+    applicationId: number,
+    body: CancelEventApplicationRequest,
+  ) {
+    const {data} = await apiClient.patch<CancelEventApplicationResponse>(
+      `${BASE_PATH}/applications/${applicationId}/cancel`,
       body,
     );
     return data;
