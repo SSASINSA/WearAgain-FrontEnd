@@ -57,6 +57,16 @@ export default function MyPageScreen() {
     navigation.navigate('ApplicationsStack' as never);
   };
 
+  const handlePressOrders = () => {
+    const tabNavigation = navigation.getParent();
+    const rootNavigation = tabNavigation?.getParent();
+    if (rootNavigation) {
+      (rootNavigation as any).navigate('Store', {screen: 'Order'});
+      return;
+    }
+    (navigation as any).navigate('Store', {screen: 'Order'});
+  };
+
   const handlePressProfile = () => {
     Alert.alert('안내', '내정보 편집 화면은 준비 중입니다.');
   };
@@ -128,6 +138,11 @@ export default function MyPageScreen() {
               label="신청 내역"
               icon={<TicketIcon width={20} height={20} />}
               onPress={handlePressApplications}
+            />
+            <MenuItem
+              label="주문 내역"
+              icon={<TicketIcon width={20} height={20} />}
+              onPress={handlePressOrders}
               showDivider={false}
             />
           </View>
