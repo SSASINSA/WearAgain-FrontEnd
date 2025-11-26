@@ -4,9 +4,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import Modal from 'react-native-modal';
-import {Text} from '../../components/common/Text';
+import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
+import {Text} from '../../../components/common/Text';
 
 interface ProductExchangeModalProps {
   isVisible: boolean;
@@ -53,81 +55,101 @@ export default function ProductExchangeModal({
       animationOut="slideOutDown"
       useNativeDriverForBackdrop
       hideModalContentWhileAnimating>
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <Text variant="headlineM" color="#111827" style={styles.modalTitle}>
-            수령 장소 선택
-          </Text>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={handleClose}>
-            <Text variant="headlineM" color="#6b7280">✕</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.optionSection}>
-            <Text variant="bodyL" color="#111827" style={styles.optionTitle}>
-              수령 장소
+      <SafeAreaProvider>
+        <View style={styles.modalWrapper}>
+          <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text variant="headlineM" color="#111827" style={styles.modalTitle}>
+              수령 장소 선택
             </Text>
-            <View style={styles.dropdownContainer}>
-              <TouchableOpacity
-                style={styles.dropdownButton}
-                onPress={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}>
-                <Text
-                  variant="bodyM"
-                  color={selectedLocation ? '#111827' : '#6b7280'}
-                  style={styles.dropdownButtonText}>
-                  {selectedLocation || '장소를 선택해주세요'}
-                </Text>
-                <Text style={styles.dropdownArrow}>
-                  {isLocationDropdownOpen ? '▲' : '▼'}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={handleClose}>
+              <Text variant="headlineM" color="#6b7280">✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.optionSection}>
+              <Text variant="bodyL" color="#111827" style={styles.optionTitle}>
+                수령 장소
+              </Text>
+              <View style={styles.dropdownContainer}>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}>
+                  <Text
+                    variant="bodyM"
+                    color={selectedLocation ? '#111827' : '#6b7280'}
+                    style={styles.dropdownButtonText}>
+                    {selectedLocation || '장소를 선택해주세요'}
+                  </Text>
+                  <Text style={styles.dropdownArrow}>
+                    {isLocationDropdownOpen ? '▲' : '▼'}
+                  </Text>
+                </TouchableOpacity>
+
+                {isLocationDropdownOpen && (
+                  <View style={styles.dropdownList}>
+                    <ScrollView
+                      style={styles.dropdownScrollView}
+                      showsVerticalScrollIndicator={true}
+                      nestedScrollEnabled={true}>
+                      {LOCATIONS.map(location => (
+                        <TouchableOpacity
+                          key={location}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setSelectedLocation(location);
+                            setIsLocationDropdownOpen(false);
+                          }}>
+                          <Text
+                            variant="bodyM"
+                            color="#111827"
+                            style={styles.dropdownItemText}>
+                            {location}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+            </View>
+          </ScrollView>
+
+          {Platform.OS === 'ios' ? (
+            <SafeAreaView style={styles.modalFooter} edges={['bottom']}>
+              <TouchableOpacity 
+                style={[
+                  styles.applyButton,
+                  confirmDisabled && styles.applyButtonDisabled,
+                ]}
+                onPress={handleConfirm}
+                disabled={confirmDisabled}>
+                <Text variant="headlineM" color="#FFFFFF" style={styles.applyButtonText}>
+                  교환 신청
                 </Text>
               </TouchableOpacity>
-
-              {isLocationDropdownOpen && (
-                <View style={styles.dropdownList}>
-                  <ScrollView
-                    style={styles.dropdownScrollView}
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled={true}>
-                    {LOCATIONS.map(location => (
-                      <TouchableOpacity
-                        key={location}
-                        style={styles.dropdownItem}
-                        onPress={() => {
-                          setSelectedLocation(location);
-                          setIsLocationDropdownOpen(false);
-                        }}>
-                        <Text
-                          variant="bodyM"
-                          color="#111827"
-                          style={styles.dropdownItemText}>
-                          {location}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
+            </SafeAreaView>
+          ) : (
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={[
+                  styles.applyButton,
+                  confirmDisabled && styles.applyButtonDisabled,
+                ]}
+                onPress={handleConfirm}
+                disabled={confirmDisabled}>
+                <Text variant="headlineM" color="#FFFFFF" style={styles.applyButtonText}>
+                  교환 신청
+                </Text>
+              </TouchableOpacity>
             </View>
+          )}
           </View>
-        </ScrollView>
-
-        <View style={styles.modalFooter}>
-          <TouchableOpacity
-            style={[
-              styles.applyButton,
-              confirmDisabled && styles.applyButtonDisabled,
-            ]}
-            onPress={handleConfirm}
-            disabled={confirmDisabled}>
-            <Text variant="headlineM" color="#FFFFFF" style={styles.applyButtonText}>
-              교환 신청
-            </Text>
-          </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaProvider>
     </Modal>
   );
 }
@@ -137,6 +159,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     margin: 0,
   },
+  modalWrapper: {
+    width: '100%',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
   modalContainer: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
@@ -144,7 +171,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderBottomWidth: 0,
-    height: 350,
+    height: 400,
     width: '100%',
   },
   modalHeader: {
@@ -172,7 +199,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalFooter: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 17,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',

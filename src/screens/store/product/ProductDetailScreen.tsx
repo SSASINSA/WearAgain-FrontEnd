@@ -2,8 +2,8 @@ import React, {useState} from 'react';
 import {View, ScrollView, StyleSheet, TouchableOpacity} from 'react-native';
 import {useRoute, RouteProp} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import StoreHeader from './StoreHeader';
-import {Text} from '../../components/common/Text';
+import StoreHeader from '../StoreHeader';
+import {Text} from '../../../components/common/Text';
 import ProductDetailContent, {ProductDetailData} from './ProductDetailContent';
 import ProductExchangeModal from './ProductExchangeModal';
 
@@ -23,7 +23,7 @@ export default function ProductDetailScreen() {
     name: '패션 마스크',
     price: 150,
     description: `이 마스크는 업사이클링 과정을 거쳐 제작되었습니다. 소재는 100% 재활용 가능한 원료로, 환경 보호에 기여합니다.`,
-    image: require('../../assets/images/store/fashionmask.png'),
+    image: require('../../../assets/images/store/fashionmask.png'),
   };
 
   const handleExchange = () => {
@@ -38,7 +38,7 @@ export default function ProductDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StoreHeader credit={99999} showTitle={false} backgroundColor="#FFFFFF" />
+      <StoreHeader showTitle={false} backgroundColor="#FFFFFF" />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <ProductDetailContent product={product} />

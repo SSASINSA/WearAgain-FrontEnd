@@ -1,7 +1,7 @@
 import React, {memo} from 'react';
 import {View, Pressable, ImageSourcePropType, StyleSheet, Image} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {Text} from '../../components/common/Text';
+import {Text} from '../../../components/common/Text';
 
 interface Props {
   product: {
