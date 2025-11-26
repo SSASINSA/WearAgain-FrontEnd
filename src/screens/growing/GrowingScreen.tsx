@@ -85,6 +85,7 @@ export default function GrowingScreen() {
   const [currentExp, setCurrentExp] = React.useState(0);
   const [nextLevelExp, setNextLevelExp] = React.useState(100);
   const [currentRepairs, setCurrentRepairs] = React.useState(0);
+  const [displayRepairs, setDisplayRepairs] = React.useState(0); // 실시간 표시용
   const [isAnimating, setIsAnimating] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
   const [co2Saved, setCo2Saved] = React.useState(0);
@@ -98,8 +99,11 @@ export default function GrowingScreen() {
   const scissorsScale = React.useRef(new Animated.Value(0.6)).current;
   const hoverAnim = React.useRef(new Animated.Value(0)).current;
   const progressAnimValue = React.useRef(new Animated.Value(0)).current;
+  const tiltAnimValue = React.useRef(new Animated.Value(0)).current;
   const [showLevelUpModal, setShowLevelUpModal] = React.useState(false);
   const [levelUpReward, setLevelUpReward] = React.useState({ level: 0, credit: 0 });
+  const [isMaxLevelUp, setIsMaxLevelUp] = React.useState(false);
+  const shouldContinueTiltAnimation = React.useRef(true); // 틸트 애니메이션 루프 제어
   
   // Debouncing을 위한 누적 사용 개수 및 타이머
   const pendingUseCount = React.useRef(0);
@@ -123,7 +127,9 @@ export default function GrowingScreen() {
           setCurrentLevel(data.mascot.level ?? 1);
           setCurrentExp(data.mascot.exp ?? 0);
           setNextLevelExp(data.mascot.nextLevelExp ?? 100);
-          setCurrentRepairs(data.mascot.magicScissorCount ?? 0);
+          const scissorCount = data.mascot.magicScissorCount ?? 0;
+          setCurrentRepairs(scissorCount);
+          setDisplayRepairs(scissorCount);
           
           // progressBar 초기값 설정
           progressAnimValue.setValue(data.mascot.exp ?? 0);
@@ -186,6 +192,50 @@ export default function GrowingScreen() {
   const handleCharacterPress = () => {
     const newCharacter = getRandomDifferentCharacter();
     setCurrentCharacter(newCharacter);
+  };
+
+  // 틸트 애니메이션 (좌우로 10도씩 반복)
+  const startTiltAnimation = () => {
+    shouldContinueTiltAnimation.current = true; // 애니메이션 시작
+    tiltAnimValue.setValue(-1); // 초기값: -10도에서 시작
+    const animationLoop = () => {
+      if (!shouldContinueTiltAnimation.current) return; // 루프 중단 체크
+      
+      Animated.sequence([
+        // -10도 상태 유지 (500ms)
+        Animated.timing(tiltAnimValue, {
+          toValue: -1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        // 콜백으로 즉시 10도로 변경
+        Animated.delay(0),
+      ]).start(() => {
+        if (!shouldContinueTiltAnimation.current) return; // 루프 중단 체크
+        
+        // 10도로 즉시 변경
+        tiltAnimValue.setValue(1);
+        
+        Animated.sequence([
+          // 10도 상태 유지 (500ms)
+          Animated.timing(tiltAnimValue, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.delay(0),
+        ]).start(() => {
+          if (!shouldContinueTiltAnimation.current) return; // 루프 중단 체크
+          
+          // -10도로 즉시 변경
+          tiltAnimValue.setValue(-1);
+          // 루프 재시작
+          animationLoop();
+        });
+      });
+    };
+    
+    animationLoop();
   };
 
   // 가위 애니메이션 함수 - 부드러운 대각선 스윕 3번
@@ -311,6 +361,7 @@ const playScissorsAnimation = (onComplete?: () => void) => {
       setCurrentExp(newExp);
       setCurrentLevel(newLevel);
       setCurrentRepairs(newRepairs);
+      setDisplayRepairs(newRepairs); // 동기화
       setNextLevelExp(updatedData.mascot.nextLevelExp ?? nextLevelExp);
       
       // 표정을 happy로 변경
@@ -319,6 +370,7 @@ const playScissorsAnimation = (onComplete?: () => void) => {
       // 가위 애니메이션 재생 (완료 후 idle로 복귀)
       playScissorsAnimation(() => {
         setIsAnimating(false);
+        
         // 애니메이션 완료 후 500ms 후 idle로 복귀
         setTimeout(() => {
           setCurrentCharacter('idle');
@@ -326,7 +378,15 @@ const playScissorsAnimation = (onComplete?: () => void) => {
           // 레벨업 여부에 따라 팝업 표시
           if (isLeveledUp) {
             setLevelUpReward({ level: newLevel, credit: rewardCredit });
+            // 레벨 10에서 레벨이 변했을 때 특별 처리 (최대 레벨에 도달한 경우)
+            const isMaxLevelReached = currentLevel > newLevel && newLevel == 1;
+            setIsMaxLevelUp(isMaxLevelReached);
             setShowLevelUpModal(true);
+            
+            // 최대 레벨에 도달한 경우 틸트 애니메이션 시작
+            if (isMaxLevelReached) {
+              startTiltAnimation();
+            }
           }
         }, 500);
       });
@@ -334,22 +394,46 @@ const playScissorsAnimation = (onComplete?: () => void) => {
       console.error('수선 실패:', error);
       Alert.alert('오류', '수선에 실패했습니다.');
       setIsAnimating(false);
+      pendingUseCount.current = 0; // 에러 발생 시에도 초기화
     }
+  };
+
+  // 버튼이 비활성화되어야 하는지 체크
+  const isRepairDisabled = () => {
+    if (isAnimating || displayRepairs <= 0) return true;
+    
+    // 전체 누적 exp 계산
+    const totalExp = (currentLevel - 1) * 100 + currentExp;
+    const tempUseCount = pendingUseCount.current;
+    const tempTotalExp = totalExp + tempUseCount * 35;
+    
+    // 최대 exp (레벨 10 * 100) 도달하면 비활성화
+    const maxTotalExp = 10 * 100;
+    if (tempTotalExp >= maxTotalExp) {
+      return true;
+    }
+    
+    return false;
   };
 
   // 즉시 실행되는 수선 버튼 핸들러 (debouncing 포함)
   const handleRepairPress = () => {
-    if (isAnimating || currentRepairs <= 0) return;
+    if (isRepairDisabled()) return;
 
-    // 1. 사용 개수 누적
+    // 1. 사용 개수 누적 (최대 20개까지만)
+    if (pendingUseCount.current >= 20) return;
     pendingUseCount.current += 1;
+    
+    // 2. 실시간으로 displayRepairs 감소 (임시 표시)
+    const newDisplayRepairs = Math.max(0, displayRepairs - 1);
+    setDisplayRepairs(newDisplayRepairs);
 
-    // 2. 기존 타이머 취소
+    // 5. 기존 타이머 취소
     if (debouncedApiCallTimeout.current) {
       clearTimeout(debouncedApiCallTimeout.current);
     }
 
-    // 3. 새 타이머 설정 (500ms 후 API 호출)
+    // 6. 새 타이머 설정 (500ms 후 API 호출)
     debouncedApiCallTimeout.current = setTimeout(() => {
       const useCount = pendingUseCount.current;
       pendingUseCount.current = 0; // 리셋
@@ -377,6 +461,11 @@ const playScissorsAnimation = (onComplete?: () => void) => {
           <View style={styles.topContent}>
             {/* 환경 통계 카드 */}
             <View style={[styles.statsCard]}>
+              <View style={styles.statsTitleContainer}>
+                <Text variant="labelL" color="#06b0b7" weight="bold">
+                  내 환경 임팩트
+                </Text>
+              </View>
               <View style={styles.statsContent}>
                 {/* CO2 절감 */}
                 <View style={styles.statItem}>
@@ -591,17 +680,17 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                 <TouchableOpacity 
                   onPress={handleRepairPress} 
                   style={styles.repairButton}
-                  disabled={isAnimating || currentRepairs <= 0}
+                  disabled={isRepairDisabled()}
                 >
                   <LinearGradient
-                colors={isAnimating || currentRepairs <= 0 ? ['#CCCCCC', '#CCCCCC'] : ['#8a3fb8', '#7E3AA8']}
+                colors={isRepairDisabled() ? ['#CCCCCC', '#CCCCCC'] : ['#8a3fb8', '#7E3AA8']}
                 start={{x: 0, y: 0}}
                 end={{x: 1, y: 0}}
                 style={styles.repairButtonGradient}
               >
                 <ScissorsIcon width={16} height={16} color="#FFFFFF" />
-                <Text variant="bodyL" color="#FFFFFF" weight="bold">수선하기</Text>
-                <Text variant="bodyL" color="#FFFFFF" weight="bold">{currentRepairs}</Text>
+                <Text variant="bodyL" color="#FFFFFF" weight="bold">가위로 수선하기</Text>
+                <Text variant="bodyL" color="#FFFFFF" weight="bold">{displayRepairs}</Text>
               </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -613,42 +702,91 @@ const playScissorsAnimation = (onComplete?: () => void) => {
       {/* 레벨업 팝업 */}
       {showLevelUpModal && (
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text variant="headlineL" color="#8a3fb8" weight="bold" align="center" style={styles.modalTitle}>
-              레벨업을 축하합니다! 🎉
-            </Text>
-            
-            <View style={styles.modalRewardContainer}>
-              <View style={styles.rewardItem}>
-                <Text variant="bodyM" color="#666666" align="center">
-                  레벨업
-                </Text>
-                <Text variant="headlineL" color="#8a3fb8" weight="bold" align="center">
-                  Lv.{levelUpReward.level}
-                </Text>
-              </View>
-              
-              <View style={styles.rewardDivider} />
-              
-              <View style={styles.rewardItem}>
-                <Text variant="bodyM" color="#666666" align="center">
-                  크레딧 리워드
-                </Text>
-                <Text variant="headlineL" color="#06b0b7" weight="bold" align="center">
-                  +{levelUpReward.credit}C
-                </Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setShowLevelUpModal(false)}
-            >
-              <Text variant="bodyL" color="#FFFFFF" weight="bold" align="center">
-                확인
+          {isMaxLevelUp ? (
+            <View style={styles.modalContent}>
+              <Text variant="headlineL" color="#8a3fb8" weight="bold" align="center" style={styles.modalTitle}>
+                옷을 다 키웠어요! 🎉
               </Text>
-            </TouchableOpacity>
-          </View>
+              
+              <Animated.View
+                style={[
+                  styles.modalCharacterContainer,
+                  {
+                    transform: [
+                      {
+                        rotate: tiltAnimValue.interpolate({
+                          inputRange: [-1, 1],
+                          outputRange: ['-10deg', '6deg'],
+                          extrapolate: 'clamp',
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Image
+                  source={require('../../assets/images/growing/weary_happy.png')}
+                  style={styles.modalCharacterImage}
+                />
+              </Animated.View>
+
+              <Text variant="headlineL" color="#06b0b7" weight="bold" align="center" style={styles.modalRewardText}>
+                +{levelUpReward.credit} C
+              </Text>
+
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => {
+                  // 애니메이션 루프 중단
+                  shouldContinueTiltAnimation.current = false;
+                  tiltAnimValue.setValue(0);
+                  setShowLevelUpModal(false);
+                  setIsMaxLevelUp(false);
+                }}
+              >
+                <Text variant="bodyL" color="#FFFFFF" weight="bold" align="center">
+                  확인
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.modalContent}>
+              <Text variant="headlineL" color="#8a3fb8" weight="bold" align="center" style={styles.modalTitle}>
+                레벨업을 축하해요! 🎉
+              </Text>
+              
+              <View style={styles.modalRewardContainer}>
+                <View style={styles.rewardItem}>
+                  <Text variant="bodyM" color="#666666" align="center">
+                    레벨업
+                  </Text>
+                  <Text variant="headlineL" color="#8a3fb8" weight="bold" align="center">
+                    Lv.{levelUpReward.level}
+                  </Text>
+                </View>
+                
+                <View style={styles.rewardDivider} />
+                
+                <View style={styles.rewardItem}>
+                  <Text variant="bodyM" color="#666666" align="center">
+                    크레딧 리워드
+                  </Text>
+                  <Text variant="headlineL" color="#06b0b7" weight="bold" align="center">
+                    +{levelUpReward.credit} C
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowLevelUpModal(false)}
+              >
+                <Text variant="bodyL" color="#FFFFFF" weight="bold" align="center">
+                  확인
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
     </SafeAreaView>
@@ -681,7 +819,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 0,
     borderWidth: 4,
-    borderColor: '#D5F5D0',
+    borderColor: '#06b0b7',
     backgroundColor: '#FFFFFF',
     shadowColor: '#3C543C',
     shadowOffset: {
@@ -691,9 +829,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 25,
     elevation: 8,
-    minHeight: 120,
-    maxHeight: 140,
-    justifyContent: 'center',
+    minHeight: 160,
+    maxHeight: 180,
+    justifyContent: 'flex-start',
+    flexDirection: 'column',
+  },
+  statsTitleContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 4,
+    alignItems: 'center',
   },
   statsContent: {
     flexDirection: 'row',
@@ -720,7 +864,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: 4,
     gap: 2,
   },
   unitText: {
@@ -820,6 +964,19 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     marginBottom: 24,
+  },
+  modalCharacterContainer: {
+    marginVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCharacterImage: {
+    width: 120,
+    height: 120,
+    resizeMode: 'contain',
+  },
+  modalRewardText: {
+    marginBottom: 32,
   },
   modalRewardContainer: {
     width: '100%',
