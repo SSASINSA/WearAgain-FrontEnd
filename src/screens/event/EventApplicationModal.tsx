@@ -5,8 +5,10 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Platform,
 } from 'react-native';
 import Modal from 'react-native-modal';
+import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {Text} from '../../components/common/Text';
 import {EventOption} from '../../hooks/useEvents';
 
@@ -60,123 +62,143 @@ export default function EventApplicationModal({
       useNativeDriverForBackdrop
       hideModalContentWhileAnimating
       avoidKeyboard>
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <Text variant="headlineM" color="#111827" style={styles.modalTitle}>
-            신청 옵션 선택
-          </Text>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={handleClose}>
-            <Text variant="headlineM" color="#6b7280">✕</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView 
-          style={styles.modalContent} 
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled">
-          {/* 옵션 선택 */}
-          <View style={styles.optionSection}>
-            <Text variant="bodyL" color="#111827" style={styles.optionTitle}>
-              옵션 선택
-            </Text>
-            <View style={styles.dropdownContainer}>
+      <SafeAreaProvider>
+        <View style={styles.modalWrapper}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text variant="headlineM" color="#111827" style={styles.modalTitle}>
+                신청 옵션 선택
+              </Text>
               <TouchableOpacity
-                style={styles.dropdownButton}
-                onPress={() => setIsOptionDropdownOpen(!isOptionDropdownOpen)}>
-                <Text
-                  variant="bodyM"
-                  color={selectedOption ? '#111827' : '#6b7280'}
-                  style={styles.dropdownButtonText}>
-                  {selectedOption
-                    ? options.find(opt => opt.optionId === selectedOption)?.name ||
-                      '옵션을 선택해주세요'
-                    : '옵션을 선택해주세요'}
-                </Text>
-                <Text style={styles.dropdownArrow}>
-                  {isOptionDropdownOpen ? '▲' : '▼'}
-                </Text>
+                style={styles.closeButton}
+                onPress={handleClose}>
+                <Text variant="headlineM" color="#6b7280">✕</Text>
               </TouchableOpacity>
-
-              {isOptionDropdownOpen && (
-                <View style={styles.dropdownList}>
-                  <ScrollView
-                    style={styles.dropdownScrollView}
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled={true}>
-                    {availableOptions.map(option => (
-                      <TouchableOpacity
-                        key={option.optionId}
-                        style={styles.dropdownItem}
-                        onPress={() => {
-                          setSelectedOption(option.optionId);
-                          setIsOptionDropdownOpen(false);
-                        }}>
-                        <View style={styles.optionItemContent}>
-                          <Text
-                            variant="bodyM"
-                            color="#111827"
-                            style={styles.dropdownItemText}>
-                            {option.name}
-                          </Text>
-                          <Text
-                            variant="bodyS"
-                            color="#6b7280"
-                            style={styles.optionCapacity}>
-                            잔여: {option.remainingCount}/{option.capacity}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                    {availableOptions.length === 0 && (
-                      <View style={styles.dropdownItem}>
-                        <Text
-                          variant="bodyM"
-                          color="#6b7280"
-                          style={styles.dropdownItemText}>
-                          선택 가능한 옵션이 없습니다.
-                        </Text>
-                      </View>
-                    )}
-                  </ScrollView>
-                </View>
-              )}
             </View>
-          </View>
 
-          {/* 메모 입력 */}
-          <View style={styles.memoSection}>
-            <Text variant="bodyL" color="#111827" style={styles.memoTitle}>
-              메모 (선택사항)
-            </Text>
-            <TextInput
-              style={styles.memoInput}
-              placeholder="메모를 입력해주세요 (예: 동행 1인 포함)"
-              placeholderTextColor="#9CA3AF"
-              value={memo}
-              onChangeText={setMemo}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-          </View>
-        </ScrollView>
+            <ScrollView 
+              style={styles.modalContent} 
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled">
+              {/* 옵션 선택 */}
+              <View style={styles.optionSection}>
+                <Text variant="bodyL" color="#111827" style={styles.optionTitle}>
+                  옵션 선택
+                </Text>
+                <View style={styles.dropdownContainer}>
+                  <TouchableOpacity
+                    style={styles.dropdownButton}
+                    onPress={() => setIsOptionDropdownOpen(!isOptionDropdownOpen)}>
+                    <Text
+                      variant="bodyM"
+                      color={selectedOption ? '#111827' : '#6b7280'}
+                      style={styles.dropdownButtonText}>
+                      {selectedOption
+                        ? options.find(opt => opt.optionId === selectedOption)?.name ||
+                          '옵션을 선택해주세요'
+                        : '옵션을 선택해주세요'}
+                    </Text>
+                    <Text style={styles.dropdownArrow}>
+                      {isOptionDropdownOpen ? '▲' : '▼'}
+                    </Text>
+                  </TouchableOpacity>
 
-        <View style={styles.modalFooter}>
-          <TouchableOpacity 
-            style={[
-              styles.applyButton,
-              confirmDisabled && styles.applyButtonDisabled,
-            ]}
-            onPress={handleConfirm}
-            disabled={confirmDisabled}>
-            <Text variant="headlineM" color="#FFFFFF" style={styles.applyButtonText}>
-              신청 완료
-            </Text>
-          </TouchableOpacity>
+                  {isOptionDropdownOpen && (
+                    <View style={styles.dropdownList}>
+                      <ScrollView
+                        style={styles.dropdownScrollView}
+                        showsVerticalScrollIndicator={true}
+                        nestedScrollEnabled={true}>
+                        {availableOptions.map(option => (
+                          <TouchableOpacity
+                            key={option.optionId}
+                            style={styles.dropdownItem}
+                            onPress={() => {
+                              setSelectedOption(option.optionId);
+                              setIsOptionDropdownOpen(false);
+                            }}>
+                            <View style={styles.optionItemContent}>
+                              <Text
+                                variant="bodyM"
+                                color="#111827"
+                                style={styles.dropdownItemText}>
+                                {option.name}
+                              </Text>
+                              <Text
+                                variant="bodyS"
+                                color="#6b7280"
+                                style={styles.optionCapacity}>
+                                잔여: {option.remainingCount}/{option.capacity}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                        {availableOptions.length === 0 && (
+                          <View style={styles.dropdownItem}>
+                            <Text
+                              variant="bodyM"
+                              color="#6b7280"
+                              style={styles.dropdownItemText}>
+                              선택 가능한 옵션이 없습니다.
+                            </Text>
+                          </View>
+                        )}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* 메모 입력 */}
+              <View style={styles.memoSection}>
+                <Text variant="bodyL" color="#111827" style={styles.memoTitle}>
+                  메모 (선택사항)
+                </Text>
+                <TextInput
+                  style={styles.memoInput}
+                  placeholder="메모를 입력해주세요 (예: 동행 1인 포함)"
+                  placeholderTextColor="#9CA3AF"
+                  value={memo}
+                  onChangeText={setMemo}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
+            </ScrollView>
+
+            {Platform.OS === 'ios' ? (
+              <SafeAreaView style={styles.modalFooter} edges={['bottom']}>
+                <TouchableOpacity 
+                  style={[
+                    styles.applyButton,
+                    confirmDisabled && styles.applyButtonDisabled,
+                  ]}
+                  onPress={handleConfirm}
+                  disabled={confirmDisabled}>
+                  <Text variant="headlineM" color="#FFFFFF" style={styles.applyButtonText}>
+                    신청 완료
+                  </Text>
+                </TouchableOpacity>
+              </SafeAreaView>
+            ) : (
+              <View style={styles.modalFooter}>
+                <TouchableOpacity 
+                  style={[
+                    styles.applyButton,
+                    confirmDisabled && styles.applyButtonDisabled,
+                  ]}
+                  onPress={handleConfirm}
+                  disabled={confirmDisabled}>
+                  <Text variant="headlineM" color="#FFFFFF" style={styles.applyButtonText}>
+                    신청 완료
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
+      </SafeAreaProvider>
     </Modal>
   );
 }
@@ -185,6 +207,11 @@ const styles = StyleSheet.create({
   modal: {
     justifyContent: 'flex-end',
     margin: 0,
+  },
+  modalWrapper: {
+    width: '100%',
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   modalContainer: {
     backgroundColor: '#FFFFFF',
@@ -221,7 +248,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalFooter: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 17,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
