@@ -6,6 +6,8 @@ import {
   EventDetailResponse,
   EventOptionResponse,
   ApplyEventRequest,
+  EventUserApplicationResponse,
+  CancelEventApplicationRequest,
 } from '../api/events/events';
 
 export type EventStatusLabel = '예정' | '진행중' | '종료';
@@ -26,11 +28,24 @@ export type EventOption = {
   name: string;
   type: string;
   displayOrder: number;
-  capacity: number;
-  appliedCount: number;
-  remainingCount: number;
+  capacity: number | null;
+  appliedCount: number | null;
+  remainingCount: number | null;
   children: EventOption[];
 };
+
+export type EventApplicationTrail = {
+  eventOptionId: number;
+  name: string;
+  type: string;
+};
+
+export type EventUserApplication = {
+  applicationId: number;
+  status: string;
+  appliedAt: string;
+  optionTrail: EventApplicationTrail[];
+} | null;
 
 export type EventDetail = {
   id: string;
@@ -50,6 +65,7 @@ export type EventDetail = {
     displayOrder: number;
   }>;
   options: EventOption[];
+  userApplication: EventUserApplication;
 };
 
 function mapStatus(status: string): EventStatusLabel {
@@ -108,6 +124,25 @@ function mapOptions(options: EventOptionResponse[]): EventOption[] {
   }));
 }
 
+function mapUserApplication(
+  userApplication?: EventUserApplicationResponse | null,
+): EventUserApplication {
+  if (!userApplication) {
+    return null;
+  }
+
+  return {
+    applicationId: userApplication.applicationId,
+    status: userApplication.status,
+    appliedAt: userApplication.appliedAt,
+    optionTrail: userApplication.optionTrail.map(trail => ({
+      eventOptionId: trail.eventOptionId,
+      name: trail.name,
+      type: trail.type,
+    })),
+  };
+}
+
 function toDetail(payload: EventDetailResponse): EventDetail {
   const mainImage = payload.images.find(img => img.displayOrder === 1);
   return {
@@ -128,6 +163,7 @@ function toDetail(payload: EventDetailResponse): EventDetail {
       displayOrder: img.displayOrder,
     })),
     options: mapOptions(payload.options),
+    userApplication: mapUserApplication(payload.userApplication),
   };
 }
 
@@ -190,6 +226,50 @@ export function useApplyEvent() {
       // 신청 목록도 업데이트
       queryClient.invalidateQueries({
         queryKey: ['applications', 'list'],
+      });
+    },
+  });
+}
+
+export function useCancelEventApplication() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      applicationId,
+      body,
+      eventId,
+    }: {
+      applicationId: number;
+      body: CancelEventApplicationRequest;
+      eventId?: string;
+    }) => eventsApi.cancelEventApplication(applicationId, body),
+    onSuccess: (_, variables) => {
+      const {applicationId, eventId} = variables;
+
+      if (eventId) {
+        queryClient.invalidateQueries({
+          queryKey: ['events', 'detail', eventId],
+        });
+      } else {
+        queryClient.invalidateQueries({
+          queryKey: ['events', 'detail'],
+          exact: false,
+        });
+      }
+
+      queryClient.invalidateQueries({
+        queryKey: ['events', 'list'],
+      });
+
+      // 신청 목록도 업데이트
+      queryClient.invalidateQueries({
+        queryKey: ['applications', 'list'],
+      });
+
+      // 개별 신청 관련 캐시가 있다면 무효화
+      queryClient.invalidateQueries({
+        queryKey: ['events', 'applications', applicationId],
       });
     },
   });

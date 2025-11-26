@@ -102,7 +102,9 @@ const styles = StyleSheet.create({
     lineHeight: 32,
   },
   descriptionSection: {
-    marginBottom: 32,
+    marginBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   sectionTitle: {
     marginBottom: 16,
@@ -110,8 +112,6 @@ const styles = StyleSheet.create({
   },
   description: {
     lineHeight: 26,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
     paddingBottom: 16,
   },
   detailsSection: {
