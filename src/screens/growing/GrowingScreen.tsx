@@ -1,4 +1,5 @@
 import React from 'react';
+import {apiClient} from '../../api/client';
 import {
   View,
   StyleSheet,
@@ -7,6 +8,7 @@ import {
   Dimensions,
   Animated,
   Easing,
+  Alert,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -15,6 +17,40 @@ import {Text} from '../../components/common/Text';
 import DetailHeader from '../../components/common/DetailHeader';
 import RankingIcon from '../../assets/icons/ranking.svg';
 import ScissorsIcon from '../../assets/icons/scissors.svg';
+
+const imgShadow = require('../../assets/images/growing/shadow.png');
+
+// API 응답 타입 정의
+interface MascotStatus {
+  level: number;
+  exp: number;
+  nextLevelExp: number;
+  magicScissorCount: number;
+  cycles: number;
+}
+
+interface ImpactStatus {
+  co2Saved: number;
+  waterSaved: number;
+  energySaved: number;
+}
+
+interface RewardStatus {
+  rewardGranted: boolean;
+  credit: number;
+}
+
+// 초기 상태 조회 응답
+interface GrowthStatusResponse {
+  mascot: MascotStatus;
+  impact: ImpactStatus;
+}
+
+// 가위 사용 API 응답
+interface MagicScissorsUseResponse {
+  mascot: MascotStatus;
+  reward: RewardStatus;
+}
 
 const {width: screenWidth} = Dimensions.get('window');
 
@@ -30,41 +66,91 @@ const characterKeys = ['idle', 'sad', 'tired', 'curious'];
 
 // 캐릭터 상태별 대사
 const characterDialogues = {
-  idle: '"안녕! 오늘 뭔가 재미있는 일이 있을까?\n 나랑 얘기하자~"',
-  happy: '"오오! 수선이 정말 잘되네!\n고마워!"',
-  sad: '"다른 옷이 버려지는 것을 봐버렸어.\n너무 슬퍼. ㅠ.ㅠ"',
-  tired: '"정말 힘든 요즘이야.\n그래도 이겨낼 수 있을 거야."',
-  curious: '"내가 환경을 위해서\n할 수 있는 일이 더 없을까?"',
+  idle: '안녕! 오늘 뭔가 재미있는 일이 있을까?\n 나랑 얘기하자~',
+  happy: '오오! 수선이 정말 잘 됐어!\n고마워!',
+  sad: '다른 옷이 버려지는 것을 봐버렸어.\n너무 슬퍼. ㅠ.ㅠ',
+  tired: '정말 힘든 요즘이야.\n그래도 이겨낼 수 있을 거야.',
+  curious: '내가 환경을 위해서\n할 수 있는 일이 더 없을까?',
 };
 
 const imgCo2Icon = require('../../assets/icons/co2.png');
 const imgWaterIcon = require('../../assets/icons/water_drop.png');
 const imgEnergyIcon = require('../../assets/icons/energy.png');
-const imgPolygon1 = 'http://localhost:3845/assets/50e5f50a7a47a98365899d337357dd1d1bd543cd.svg';
-const imgFrame = 'http://localhost:3845/assets/52578f4e2fc4b3c22e2317defbc9cc3cd9e1b6bd.svg';
-const imgDiv = 'http://localhost:3845/assets/06bf3123962fa4cb90ef2887e2273d8af2e9f15d.svg';
 const imgEllipse1 = 'http://localhost:3845/assets/a0e9a6afb2be9a36ddb0883ba49c5206fe2479a4.svg';
-const imgFrame1 = 'http://localhost:3845/assets/b0ef03a51c1a695fc2d0d8863ff11172d945bc8d.svg';
 
 export default function GrowingScreen() {
   const navigation = useNavigation();
   const [currentCharacter, setCurrentCharacter] = React.useState('idle');
   const [currentLevel, setCurrentLevel] = React.useState(1);
   const [currentExp, setCurrentExp] = React.useState(0);
-  const [currentRepairs, setCurrentRepairs] = React.useState(5);
+  const [nextLevelExp, setNextLevelExp] = React.useState(100);
+  const [currentRepairs, setCurrentRepairs] = React.useState(0);
+  const [displayRepairs, setDisplayRepairs] = React.useState(0); // 실시간 표시용
   const [isAnimating, setIsAnimating] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [co2Saved, setCo2Saved] = React.useState(0);
+  const [waterSaved, setWaterSaved] = React.useState(0);
+  const [energySaved, setEnergySaved] = React.useState(0);
+  
   const scissorsAnimX = React.useRef(new Animated.Value(0)).current;
   const scissorsAnimY = React.useRef(new Animated.Value(0)).current;
   const scissorsOpacity = React.useRef(new Animated.Value(0)).current;
   const scissorsRotate = React.useRef(new Animated.Value(0)).current;
   const scissorsScale = React.useRef(new Animated.Value(0.6)).current;
   const hoverAnim = React.useRef(new Animated.Value(0)).current;
+  const progressAnimValue = React.useRef(new Animated.Value(0)).current;
+  const tiltAnimValue = React.useRef(new Animated.Value(0)).current;
+  const [showLevelUpModal, setShowLevelUpModal] = React.useState(false);
+  const [levelUpReward, setLevelUpReward] = React.useState({ level: 0, credit: 0 });
+  const [isMaxLevelUp, setIsMaxLevelUp] = React.useState(false);
+  const shouldContinueTiltAnimation = React.useRef(true); // 틸트 애니메이션 루프 제어
+  
+  // Debouncing을 위한 누적 사용 개수 및 타이머
+  const pendingUseCount = React.useRef(0);
+  const debouncedApiCallTimeout = React.useRef<NodeJS.Timeout>();
 
   React.useEffect(() => {
     navigation.setOptions({
       headerShown: false,
     } as any);
   }, [navigation]);
+
+  // 초기 데이터 로드
+  React.useEffect(() => {
+    const loadGrowthStatus = async () => {
+      try {
+        const response = await apiClient.get<GrowthStatusResponse>('/growth/status');
+        const data = response.data;
+        
+        // mascot 데이터 확인
+        if (data?.mascot) {
+          setCurrentLevel(data.mascot.level ?? 1);
+          setCurrentExp(data.mascot.exp ?? 0);
+          setNextLevelExp(data.mascot.nextLevelExp ?? 100);
+          const scissorCount = data.mascot.magicScissorCount ?? 0;
+          setCurrentRepairs(scissorCount);
+          setDisplayRepairs(scissorCount);
+          
+          // progressBar 초기값 설정
+          progressAnimValue.setValue(data.mascot.exp ?? 0);
+        }
+        
+        // impact 데이터 확인
+        if (data?.impact) {
+          setCo2Saved(data.impact.co2Saved ?? 0);
+          setWaterSaved(data.impact.waterSaved ?? 0);
+          setEnergySaved(data.impact.energySaved ?? 0);
+        }
+      } catch (error) {
+        console.error('성장 상태 조회 실패:', error);
+        Alert.alert('오류', '성장 상태를 불러올 수 없습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadGrowthStatus();
+  }, [progressAnimValue]);
 
   // 호버 애니메이션 (위아래로 약간씩 반복 이동)
   React.useEffect(() => {
@@ -78,12 +164,12 @@ export default function GrowingScreen() {
       Animated.sequence([
         Animated.timing(hoverAnim, {
           toValue: 1,
-          duration: 2000,
+          duration: 1000,
           useNativeDriver: true,
         }),
         Animated.timing(hoverAnim, {
           toValue: 0,
-          duration: 2000,
+          duration: 1000,
           useNativeDriver: true,
         }),
       ]),
@@ -108,6 +194,50 @@ export default function GrowingScreen() {
     setCurrentCharacter(newCharacter);
   };
 
+  // 틸트 애니메이션 (좌우로 10도씩 반복)
+  const startTiltAnimation = () => {
+    shouldContinueTiltAnimation.current = true; // 애니메이션 시작
+    tiltAnimValue.setValue(-1); // 초기값: -10도에서 시작
+    const animationLoop = () => {
+      if (!shouldContinueTiltAnimation.current) return; // 루프 중단 체크
+      
+      Animated.sequence([
+        // -10도 상태 유지 (500ms)
+        Animated.timing(tiltAnimValue, {
+          toValue: -1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        // 콜백으로 즉시 10도로 변경
+        Animated.delay(0),
+      ]).start(() => {
+        if (!shouldContinueTiltAnimation.current) return; // 루프 중단 체크
+        
+        // 10도로 즉시 변경
+        tiltAnimValue.setValue(1);
+        
+        Animated.sequence([
+          // 10도 상태 유지 (500ms)
+          Animated.timing(tiltAnimValue, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.delay(0),
+        ]).start(() => {
+          if (!shouldContinueTiltAnimation.current) return; // 루프 중단 체크
+          
+          // -10도로 즉시 변경
+          tiltAnimValue.setValue(-1);
+          // 루프 재시작
+          animationLoop();
+        });
+      });
+    };
+    
+    animationLoop();
+  };
+
   // 가위 애니메이션 함수 - 부드러운 대각선 스윕 3번
 const playScissorsAnimation = (onComplete?: () => void) => {
   // 초기화
@@ -118,39 +248,39 @@ const playScissorsAnimation = (onComplete?: () => void) => {
   scissorsScale.setValue(0.6);
 
   Animated.sequence([
-    // 1. 살짝 튕기면서 페이드인
+    // 1. 나타나면서 스프링 스케일
     Animated.parallel([
       Animated.timing(scissorsOpacity, {
         toValue: 1,
-        duration: 180,
+        duration: 100,
         useNativeDriver: true,
       }),
       Animated.spring(scissorsScale, {
         toValue: 1,
-        friction: 6,
-        tension: 140,
+        speed: 24,
+        bounciness: 8,
         useNativeDriver: true,
       }),
     ]),
 
-    // 2. 대각선으로 부드럽게 3번 훑기 + 살짝 기울어진 상태 유지
+    // 2. 대각선으로 편도 이동 (회전 포함)
     Animated.parallel([
       Animated.timing(scissorsAnimX, {
         toValue: 1,
-        duration: 900,
-        easing: Easing.inOut(Easing.quad),
+        duration: 600,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
       Animated.timing(scissorsAnimY, {
         toValue: 1,
-        duration: 900,
-        easing: Easing.inOut(Easing.quad),
+        duration: 600,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
       Animated.timing(scissorsRotate, {
         toValue: 1,
-        duration: 900,
-        easing: Easing.inOut(Easing.sin),
+        duration: 600,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
     ]),
@@ -171,37 +301,146 @@ const playScissorsAnimation = (onComplete?: () => void) => {
   ]).start(onComplete);
 };
 
-
-  const handleRepairPress = () => {
-    if (isAnimating || currentRepairs <= 0) return;
+  // 누적된 사용 개수로 API 호출
+  const executeRepairApi = async (useCount: number) => {
+    if (useCount <= 0) return;
 
     setIsAnimating(true);
     
-    // EXP 35 증가 및 레벨 업 로직
-    let newExp = currentExp + 35;
-    let newLevel = currentLevel;
+    try {
+      // 1. 서버에 가위 사용 요청 (누적 개수 전송)
+      const response = await apiClient.post<MagicScissorsUseResponse>('/growth/magic-scissors/use', {
+        useCount: useCount,
+      });
+      const updatedData = response.data;
+      
+      // 2. 서버에서 받은 데이터로 상태 업데이트
+      const newLevel = updatedData.mascot.level;
+      const newExp = updatedData.mascot.exp;
+      const newRepairs = updatedData.mascot.magicScissorCount;
+      const isLeveledUp = updatedData.reward.rewardGranted; // reward.rewardGranted로 레벨업 판정
+      
+      // 3. progressBar 애니메이션 시작
+      if (isLeveledUp) {
+        // 레벨업이 있는 경우: nextLevelExp까지 올라갔다가 새 EXP로 리셋
+        Animated.sequence([
+          // 1단계: nextLevelExp까지 올라가기 (현재 nextLevelExp 값 기준)
+          Animated.timing(progressAnimValue, {
+            toValue: nextLevelExp,
+            duration: 600,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: false,
+          }),
+          // 2단계: 리셋 (즉시)
+          Animated.timing(progressAnimValue, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: false,
+          }),
+          // 3단계: 새 EXP까지 차오르기
+          Animated.timing(progressAnimValue, {
+            toValue: newExp,
+            duration: 600,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: false,
+          }),
+        ]).start();
+      } else {
+        // 레벨업이 없는 경우: 단순히 새 EXP까지 올라가기
+        Animated.timing(progressAnimValue, {
+          toValue: newExp,
+          duration: 800,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }).start();
+      }
 
-    // 100 이상의 EXP가 있는 동안 레벨 업
-    while (newExp >= 100) {
-      newLevel += 1;
-      newExp -= 100;
+      // 레벨업 정보 캡처 (콜백에서 사용하기 위해)
+      const rewardCredit = updatedData.reward.credit;
+
+      setCurrentExp(newExp);
+      setCurrentLevel(newLevel);
+      setCurrentRepairs(newRepairs);
+      setDisplayRepairs(newRepairs); // 동기화
+      setNextLevelExp(updatedData.mascot.nextLevelExp ?? nextLevelExp);
+      
+      // 표정을 happy로 변경
+      setCurrentCharacter('happy');
+      
+      // 가위 애니메이션 재생 (완료 후 idle로 복귀)
+      playScissorsAnimation(() => {
+        setIsAnimating(false);
+        
+        // 애니메이션 완료 후 500ms 후 idle로 복귀
+        setTimeout(() => {
+          setCurrentCharacter('idle');
+          
+          // 레벨업 여부에 따라 팝업 표시
+          if (isLeveledUp) {
+            setLevelUpReward({ level: newLevel, credit: rewardCredit });
+            // 레벨 10에서 레벨이 변했을 때 특별 처리 (최대 레벨에 도달한 경우)
+            const isMaxLevelReached = currentLevel > newLevel && newLevel == 1;
+            setIsMaxLevelUp(isMaxLevelReached);
+            setShowLevelUpModal(true);
+            
+            // 최대 레벨에 도달한 경우 틸트 애니메이션 시작
+            if (isMaxLevelReached) {
+              startTiltAnimation();
+            }
+          }
+        }, 500);
+      });
+    } catch (error) {
+      console.error('수선 실패:', error);
+      Alert.alert('오류', '수선에 실패했습니다.');
+      setIsAnimating(false);
+      pendingUseCount.current = 0; // 에러 발생 시에도 초기화
+    }
+  };
+
+  // 버튼이 비활성화되어야 하는지 체크
+  const isRepairDisabled = () => {
+    if (isAnimating || displayRepairs <= 0) return true;
+    
+    // 전체 누적 exp 계산
+    const totalExp = (currentLevel - 1) * 100 + currentExp;
+    const tempUseCount = pendingUseCount.current;
+    const tempTotalExp = totalExp + tempUseCount * 35;
+    
+    // 최대 exp (레벨 10 * 100) 도달하면 비활성화
+    const maxTotalExp = 10 * 100;
+    if (tempTotalExp >= maxTotalExp) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // 즉시 실행되는 수선 버튼 핸들러 (debouncing 포함)
+  const handleRepairPress = () => {
+    if (isRepairDisabled()) return;
+
+    // 1. 사용 개수 누적 (최대 20개까지만)
+    if (pendingUseCount.current >= 20) return;
+    pendingUseCount.current += 1;
+    
+    // 2. 실시간으로 displayRepairs 감소 (임시 표시)
+    const newDisplayRepairs = Math.max(0, displayRepairs - 1);
+    setDisplayRepairs(newDisplayRepairs);
+
+    // 5. 기존 타이머 취소
+    if (debouncedApiCallTimeout.current) {
+      clearTimeout(debouncedApiCallTimeout.current);
     }
 
-    setCurrentExp(newExp);
-    setCurrentLevel(newLevel);
-    setCurrentRepairs(currentRepairs - 1);
-    
-    // 표정을 happy로 변경
-    setCurrentCharacter('happy');
-    
-    // 가위 애니메이션 재생 (완료 후 idle로 복귀)
-    playScissorsAnimation(() => {
-      setIsAnimating(false);
-      // 애니메이션 완료 후 2초 후 idle로 복귀
-      setTimeout(() => {
-        setCurrentCharacter('idle');
-      }, 2000);
-    });
+    // 6. 새 타이머 설정 (500ms 후 API 호출)
+    debouncedApiCallTimeout.current = setTimeout(() => {
+      const useCount = pendingUseCount.current;
+      pendingUseCount.current = 0; // 리셋
+      
+      // API 호출
+      executeRepairApi(useCount);
+    }, 500);
   };
 
   const handleRankingPress = () => {
@@ -221,39 +460,53 @@ const playScissorsAnimation = (onComplete?: () => void) => {
           {/* 상단 콘텐츠 영역 */}
           <View style={styles.topContent}>
             {/* 환경 통계 카드 */}
-            <View style={styles.statsCard}>
+            <View style={[styles.statsCard]}>
+              <View style={styles.statsTitleContainer}>
+                <Text variant="labelL" color="#06b0b7" weight="bold">
+                  내 환경 임팩트
+                </Text>
+              </View>
               <View style={styles.statsContent}>
                 {/* CO2 절감 */}
                 <View style={styles.statItem}>
                   <Image source={imgCo2Icon} style={styles.statIcon} />
-                  <Text variant="bodyS" color="#888888" align="center" style={styles.statLabel}>
+                  <Text variant="bodyS2" color="#888888" align="center" style={styles.statLabel}>
                     CO2 절감
                   </Text>
-                  <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
-                    20kg
-                  </Text>
+                  <View style={styles.statValueContainer}>
+                    <Text variant="headlineS" color="#333333" align="center" weight="bold">
+                      {Math.round(co2Saved * 100) / 100}
+                    </Text>
+                    <Text variant="bodyS2" color="#888888" style={styles.unitText}>kg</Text>
+                  </View>
                 </View>
 
                 {/* 물 절감 */}
                 <View style={styles.statItem}>
                   <Image source={imgWaterIcon} style={styles.statIcon} />
-                  <Text variant="bodyS" color="#888888" align="center" style={styles.statLabel}>
+                  <Text variant="bodyS2" color="#888888" align="center" style={styles.statLabel}>
                     물 절감
                   </Text>
-                  <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
-                    35.4L
-                  </Text>
+                  <View style={styles.statValueContainer}>
+                    <Text variant="headlineS" color="#333333" align="center" weight="bold">
+                      {Math.round(waterSaved * 100) / 100}
+                    </Text>
+                    <Text variant="bodyS2" color="#888888" style={styles.unitText}>L</Text>
+                  </View>
                 </View>
 
                 {/* 에너지 절감 */}
                 <View style={styles.statItem}>
                   <Image source={imgEnergyIcon} style={styles.statIcon} />
-                  <Text variant="bodyS" color="#888888" align="center" style={styles.statLabel}>
+                  <Text variant="bodyS2" color="#888888" align="center" style={styles.statLabel}>
                     에너지 절감
                   </Text>
-                  <Text variant="headlineM" color="#333333" align="center" weight="bold" style={styles.statValue}>
-                    12.6KWh
-                  </Text>
+                  <View style={styles.statValueContainer}>
+                    <Text variant="headlineS" color="#333333" align="center" weight="bold">
+                      {Math.round(energySaved * 100) / 100}
+                    </Text>
+                    <Text variant="bodyS2" color="#888888" style={styles.unitText}>kWh</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -271,10 +524,6 @@ const playScissorsAnimation = (onComplete?: () => void) => {
               style={styles.characterSection}
               activeOpacity={1}
             >
-              {/* 화살표 */}
-              <View style={styles.arrowContainer}>
-                <Image source={{uri: imgPolygon1}} style={styles.arrowIcon} />
-              </View>
 
               {/* 캐릭터 이미지 */}
               <Animated.View
@@ -304,27 +553,27 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                         // 0. 등장/퇴장 스케일
                         { scale: scissorsScale },
 
-                        // 1. 살짝 기울어진 상태로 왔다 갔다 (전부 360도 회전 대신)
+                        // 1. 회전 애니메이션
                         {
                           rotate: scissorsRotate.interpolate({
-                            inputRange: [0, 0.25, 0.5, 0.75, 1],
-                            outputRange: ['-18deg', '-12deg', '-16deg', '-10deg', '-14deg'],
+                            inputRange: [0, 1],
+                            outputRange: ['0deg', '360deg'],
                           }),
                         },
 
-                        // 2. X축: 대각선으로 좌우 3번 스윕 후 중앙으로
+                        // 2. X축: 대각선 편도 이동 (왼쪽 위에서 오른쪽 아래로, 한 번만)
                         {
                           translateX: scissorsAnimX.interpolate({
-                            inputRange: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
-                            outputRange: [-72, 72, -60, 60, -48, 48, 0],
+                            inputRange: [0, 1],
+                            outputRange: [-80, 80],
                           }),
                         },
 
-                        // 3. Y축: X랑 비슷하게 대각선 스윕
+                        // 3. Y축: X랑 반대로 대각선 편도 이동
                         {
                           translateY: scissorsAnimY.interpolate({
-                            inputRange: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
-                            outputRange: [-64, 64, -52, 52, -40, 40, 0],
+                            inputRange: [0, 1],
+                            outputRange: [-80, 80],
                           }),
                         },
                       ],
@@ -344,26 +593,27 @@ const playScissorsAnimation = (onComplete?: () => void) => {
                   {
                     transform: [
                       {
+                        scaleX: hoverAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.88, 0.78],
+                        }),
+                      },
+                      {
                         scaleY: hoverAnim.interpolate({
                           inputRange: [0, 1],
-                          outputRange: [0.6, 1],
+                          outputRange: [0.88, 0.78],
                         }),
                       },
                     ],
                     opacity: hoverAnim.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [0.4, 0.6],
+                      outputRange: [0.7, 0.45],
                     }),
                   },
                 ]}
               >
-                <View style={styles.shadowEllipse} />
+                <Image source={imgShadow} style={styles.shadowImage} />
               </Animated.View>
-
-              {/* 캐릭터 이름 배경 */}
-              <View style={styles.characterNameContainer}>
-                <Image source={{uri: imgEllipse1}} style={styles.characterNameBackground} />
-              </View>
             </TouchableOpacity>
           </View>
 
@@ -397,45 +647,148 @@ const playScissorsAnimation = (onComplete?: () => void) => {
 
                   <View style={styles.levelTextContainer}>
                     <Text variant="bodyM" color="#6B7280">다음 레벨까지</Text>
-                    <Text variant="bodyM" color="#06b0b7">{currentExp}/100 EXP</Text>
+                    <Text variant="bodyM" color="#06b0b7">{currentExp}/{nextLevelExp} EXP</Text>
                   </View>
                 </View>
                 
                 <View style={styles.progressBarWrapper}>
                   <View style={styles.progressBarContainer}>
                     <View style={styles.progressBarBackground}>
-                      <LinearGradient
-                        colors={['#06b0b7', '#08d4dc']}
-                        start={{x: 0, y: 0}}
-                        end={{x: 1, y: 0}}
-                        style={[styles.progressBarFill, { width: `${currentExp}%` }]}
-                      />
+                      <Animated.View
+                        style={[
+                          styles.progressBarFill,
+                          {
+                            width: progressAnimValue.interpolate({
+                              inputRange: [0, nextLevelExp],
+                              outputRange: ['0%', '100%'],
+                            }),
+                          },
+                        ]}
+                      >
+                        <LinearGradient
+                          colors={['#06b0b7', '#08d4dc']}
+                          start={{x: 0, y: 0}}
+                          end={{x: 1, y: 0}}
+                          style={{ width: '100%', height: '100%' }}
+                        />
+                      </Animated.View>
                     </View>
                   </View>
                 </View>
-              </View>
-            </View>
 
-            {/* 수선하기 버튼 */}
-            <TouchableOpacity 
-              onPress={handleRepairPress} 
-              style={styles.repairButton}
-              disabled={isAnimating || currentRepairs <= 0}
-            >
-              <LinearGradient
-                colors={isAnimating || currentRepairs <= 0 ? ['#CCCCCC', '#CCCCCC'] : ['#8a3fb8', '#8a3fb8']}
+                {/* 수선하기 버튼 */}
+                <TouchableOpacity 
+                  onPress={handleRepairPress} 
+                  style={styles.repairButton}
+                  disabled={isRepairDisabled()}
+                >
+                  <LinearGradient
+                colors={isRepairDisabled() ? ['#CCCCCC', '#CCCCCC'] : ['#8a3fb8', '#7E3AA8']}
                 start={{x: 0, y: 0}}
                 end={{x: 1, y: 0}}
                 style={styles.repairButtonGradient}
               >
                 <ScissorsIcon width={16} height={16} color="#FFFFFF" />
-                <Text variant="bodyL" color="#FFFFFF" weight="bold">수선하기</Text>
-                <Text variant="bodyL" color="#FFFFFF" weight="bold">{currentRepairs}</Text>
+                <Text variant="bodyL" color="#FFFFFF" weight="bold">가위로 수선하기</Text>
+                <Text variant="bodyL" color="#FFFFFF" weight="bold">{displayRepairs}</Text>
               </LinearGradient>
-            </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
       </LinearGradient>
+
+      {/* 레벨업 팝업 */}
+      {showLevelUpModal && (
+        <View style={styles.modalOverlay}>
+          {isMaxLevelUp ? (
+            <View style={styles.modalContent}>
+              <Text variant="headlineL" color="#8a3fb8" weight="bold" align="center" style={styles.modalTitle}>
+                옷을 다 키웠어요! 🎉
+              </Text>
+              
+              <Animated.View
+                style={[
+                  styles.modalCharacterContainer,
+                  {
+                    transform: [
+                      {
+                        rotate: tiltAnimValue.interpolate({
+                          inputRange: [-1, 1],
+                          outputRange: ['-10deg', '6deg'],
+                          extrapolate: 'clamp',
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Image
+                  source={require('../../assets/images/growing/weary_happy.png')}
+                  style={styles.modalCharacterImage}
+                />
+              </Animated.View>
+
+              <Text variant="headlineL" color="#06b0b7" weight="bold" align="center" style={styles.modalRewardText}>
+                +{levelUpReward.credit} C
+              </Text>
+
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => {
+                  // 애니메이션 루프 중단
+                  shouldContinueTiltAnimation.current = false;
+                  tiltAnimValue.setValue(0);
+                  setShowLevelUpModal(false);
+                  setIsMaxLevelUp(false);
+                }}
+              >
+                <Text variant="bodyL" color="#FFFFFF" weight="bold" align="center">
+                  확인
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.modalContent}>
+              <Text variant="headlineL" color="#8a3fb8" weight="bold" align="center" style={styles.modalTitle}>
+                레벨업을 축하해요! 🎉
+              </Text>
+              
+              <View style={styles.modalRewardContainer}>
+                <View style={styles.rewardItem}>
+                  <Text variant="bodyM" color="#666666" align="center">
+                    레벨업
+                  </Text>
+                  <Text variant="headlineL" color="#8a3fb8" weight="bold" align="center">
+                    Lv.{levelUpReward.level}
+                  </Text>
+                </View>
+                
+                <View style={styles.rewardDivider} />
+                
+                <View style={styles.rewardItem}>
+                  <Text variant="bodyM" color="#666666" align="center">
+                    크레딧 리워드
+                  </Text>
+                  <Text variant="headlineL" color="#06b0b7" weight="bold" align="center">
+                    +{levelUpReward.credit} C
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowLevelUpModal(false)}
+              >
+                <Text variant="bodyL" color="#FFFFFF" weight="bold" align="center">
+                  확인
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -459,12 +812,16 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   statsCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     marginHorizontal: 24,
     marginTop: 24,
-    paddingVertical: 20,
-    shadowColor: '#000000',
+    marginBottom: 2,
+    paddingVertical: 12,
+    paddingHorizontal: 0,
+    borderWidth: 4,
+    borderColor: '#06b0b7',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#3C543C',
     shadowOffset: {
       width: 0,
       height: 8,
@@ -472,27 +829,46 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 25,
     elevation: 8,
+    minHeight: 160,
+    maxHeight: 180,
+    justifyContent: 'flex-start',
+    flexDirection: 'column',
+  },
+  statsTitleContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 4,
+    alignItems: 'center',
   },
   statsContent: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 0,
+    flex: 1,
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
+    justifyContent: 'center',
   },
   statIcon: {
     width: 32,
     height: 32,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   statLabel: {
     marginBottom: 4,
   },
-  statValue: {
+  statValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
     marginTop: 4,
+    gap: 2,
+  },
+  unitText: {
+    marginBottom: 1,
   },
   dialogueCard: {
     backgroundColor: '#FFFFFF',
@@ -525,6 +901,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   characterImage: {
     width: '100%',
@@ -547,14 +925,84 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   shadowContainer: {
-    marginTop: -4,
+    marginTop: -26,
     marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  shadowEllipse: {
+  shadowImage: {
     width: 120,
-    height: 20,
-    borderRadius: 60,
-    backgroundColor: '#D1D5DB',
+    height: 72,
+    resizeMode: 'contain',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    width: '80%',
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 25,
+    elevation: 12,
+  },
+  modalTitle: {
+    marginBottom: 24,
+  },
+  modalCharacterContainer: {
+    marginVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCharacterImage: {
+    width: 120,
+    height: 120,
+    resizeMode: 'contain',
+  },
+  modalRewardText: {
+    marginBottom: 32,
+  },
+  modalRewardContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  rewardItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  rewardDivider: {
+    width: 1,
+    height: 60,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 12,
+  },
+  modalButton: {
+    width: '100%',
+    paddingVertical: 14,
+    backgroundColor: '#8a3fb8',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   characterNameContainer: {
     width: 176,
@@ -580,7 +1028,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#06b0b7',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 2,
   },
   actionButtonLabel: {
     fontSize: 12,
@@ -589,17 +1037,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginHorizontal: 24,
-    marginBottom: 8,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#F3F4F6',
     position: 'relative',
     overflow: 'visible',
-    minHeight: 140,
   },
   levelContent: {
     position: 'relative',
-    paddingVertical: 20,
-    paddingHorizontal: 21,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
   },
   levelTopContainer: {
     flexDirection: 'row',
@@ -615,10 +1062,12 @@ const styles = StyleSheet.create({
   },
   progressBarWrapper: {
     position: 'relative',
-    paddingTop: 16,
+    paddingTop: 0,
+    marginBottom: 4,
   },
   progressBarContainer: {
-    marginBottom: 0,
+    marginTop: 12,
+    marginBottom: 2,
   },
   progressBarBackground: {
     height: 12,
@@ -628,8 +1077,8 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    width: '75%', // 75/100 = 75%
     borderRadius: 9999,
+    overflow: 'hidden',
   },
   levelBadge: {
     paddingHorizontal: 12,
@@ -640,7 +1089,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   repairButton: {
-    marginHorizontal: 24,
+    marginTop: 8,
+    width: '100%',
   },
   repairButtonGradient: {
     flexDirection: 'row',
