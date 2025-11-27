@@ -1,7 +1,7 @@
 import React from 'react';
 import {ScrollView, View, StyleSheet} from 'react-native';
 import {Text} from '../../components/common/Text';
-import ProductCard from './ProductCard';
+import ProductCard from './product/ProductCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import StoreHeader from './StoreHeader';
 

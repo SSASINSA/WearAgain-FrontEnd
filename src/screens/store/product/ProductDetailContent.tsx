@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Image, StyleSheet} from 'react-native';
-import {Text} from '../../components/common/Text';
+import {Text} from '../../../components/common/Text';
 
 export interface ProductDetailData {
   id: string;

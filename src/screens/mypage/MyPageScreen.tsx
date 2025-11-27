@@ -7,13 +7,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import Svg, {Circle, Path, Rect} from 'react-native-svg';
 import {Text} from '../../components/common/Text';
 import {useAuthStore} from '../../store/auth.store';
+import {useUserSummary} from '../../hooks/useAuth';
 import TicketIcon from '../../assets/icons/ticket.svg';
 import PromoImage from '../../assets/images/more-promo.png';
+import CommentIcon from '../../assets/icons/comment_mypage.svg';
+import ReceiptIcon from '../../assets/icons/receipt.svg';
 
 type MenuItemProps = {
   label: string;
@@ -28,7 +30,9 @@ function MenuItem({label, icon, onPress, showDivider = true}: MenuItemProps) {
       style={[styles.menuItem, showDivider && styles.menuDivider]}
       onPress={onPress}>
       <View style={styles.menuLeft}>
-        {icon}
+        <View style={styles.iconContainer}>
+          {icon}
+        </View>
         <Text variant="bodyM" color="#1F2937" style={styles.menuLabel}>
           {label}
         </Text>
@@ -40,10 +44,10 @@ function MenuItem({label, icon, onPress, showDivider = true}: MenuItemProps) {
 
 export default function MyPageScreen() {
   const navigation = useNavigation();
-  const userName = useAuthStore(state => state.user?.nickname);
   const logout = useAuthStore(state => state.logout);
+  const {data: summary} = useUserSummary();
 
-  const displayName = useMemo(() => userName ?? '사용자', [userName]);
+  const displayName = useMemo(() => summary?.displayName ?? '사용자', [summary?.displayName]);
 
   const handlePressApplications = () => {
     const tabNavigation = navigation.getParent();
@@ -57,8 +61,26 @@ export default function MyPageScreen() {
     navigation.navigate('ApplicationsStack' as never);
   };
 
+  const handlePressOrders = () => {
+    const tabNavigation = navigation.getParent();
+    const rootNavigation = tabNavigation?.getParent();
+    if (rootNavigation) {
+      (rootNavigation as any).navigate('Store', {screen: 'Order'});
+      return;
+    }
+    (navigation as any).navigate('Store', {screen: 'Order'});
+  };
+
   const handlePressProfile = () => {
     Alert.alert('안내', '내정보 편집 화면은 준비 중입니다.');
+  };
+
+  const handlePressMyPosts = () => {
+    Alert.alert('안내', '내가 쓴 글 화면은 준비 중입니다.');
+  };
+
+  const handlePressMyComments = () => {
+    Alert.alert('안내', '댓글 단 글 화면은 준비 중입니다.');
   };
 
   const handlePressInquiry = () => {
@@ -89,12 +111,11 @@ export default function MyPageScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         <View style={styles.greetingCard}>
-          <View>
+          <View style={styles.greetingTextContainer}>
             <Text variant="bodyL" weight="semiBold" color="#111827">
               {displayName}
             </Text>
@@ -128,7 +149,30 @@ export default function MyPageScreen() {
               label="신청 내역"
               icon={<TicketIcon width={20} height={20} />}
               onPress={handlePressApplications}
+            />
+            <MenuItem
+              label="주문 내역"
+              icon={<ReceiptIcon width={15} height={15} />}
+              onPress={handlePressOrders}
               showDivider={false}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text variant="bodyM" weight="semiBold" color="#111827">
+            커뮤니티
+          </Text>
+          <View style={styles.menuGroup}>
+            <MenuItem
+              label="내가 쓴 글"
+              icon={<MyPostIcon />}
+              onPress={handlePressMyPosts}
+            />
+            <MenuItem
+              label="댓글 단 글"
+              icon={<CommentIcon width={20} height={20} />}
+              onPress={handlePressMyComments}
             />
           </View>
         </View>
@@ -157,7 +201,6 @@ export default function MyPageScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
   );
 }
 
@@ -213,6 +256,27 @@ function DocumentIcon() {
   );
 }
 
+function MyPostIcon() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Rect
+        x={4}
+        y={4}
+        width={16}
+        height={16}
+        rx={2}
+        stroke="#111827"
+        strokeWidth={1.0}
+      />
+      <Path
+        d="M7 9h10M7 12h10M7 15h8"
+        stroke="#111827"
+        strokeWidth={1.0}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
 function CodeIcon() {
   return (
     <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -279,6 +343,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  greetingTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   logoutButton: {
     padding: 6,
   },
@@ -324,6 +392,12 @@ const styles = StyleSheet.create({
   },
   menuLeft: {
     flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   menuLabel: {

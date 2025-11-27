@@ -5,8 +5,10 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Platform,
 } from 'react-native';
 import Modal from 'react-native-modal';
+import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {Text} from '../../components/common/Text';
 
 interface EventCancelModalProps {
@@ -51,53 +53,73 @@ export default function EventCancelModal({
       useNativeDriverForBackdrop
       hideModalContentWhileAnimating
       avoidKeyboard>
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <Text variant="headlineM" color="#111827" style={styles.modalTitle}>
-            신청 취소
-          </Text>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={handleClose}>
-            <Text variant="headlineM" color="#6b7280">✕</Text>
-          </TouchableOpacity>
-        </View>
+      <SafeAreaProvider>
+        <View style={styles.modalWrapper}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text variant="headlineM" color="#111827" style={styles.modalTitle}>
+                신청 취소
+              </Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={handleClose}>
+                <Text variant="headlineM" color="#6b7280">✕</Text>
+              </TouchableOpacity>
+            </View>
 
-        <ScrollView 
-          style={styles.modalContent} 
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled">
-          <View style={styles.reasonSection}>
-            <Text variant="bodyL" color="#111827" style={styles.reasonTitle}>
-              취소 사유
-            </Text>
-            <TextInput
-              style={styles.reasonInput}
-              placeholder="취소 사유를 입력해주세요 (예: 일정이 변경되었습니다.)"
-              placeholderTextColor="#9CA3AF"
-              value={reason}
-              onChangeText={setReason}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+            <ScrollView 
+              style={styles.modalContent} 
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled">
+              <View style={styles.reasonSection}>
+                <Text variant="bodyL" color="#111827" style={styles.reasonTitle}>
+                  취소 사유
+                </Text>
+                <TextInput
+                  style={styles.reasonInput}
+                  placeholder="취소 사유를 입력해주세요 (예: 일정이 변경되었습니다.)"
+                  placeholderTextColor="#9CA3AF"
+                  value={reason}
+                  onChangeText={setReason}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+            </ScrollView>
+
+            {Platform.OS === 'ios' ? (
+              <SafeAreaView style={styles.modalFooter} edges={['bottom']}>
+                <TouchableOpacity 
+                  style={[
+                    styles.cancelButton,
+                    confirmDisabled && styles.cancelButtonDisabled,
+                  ]}
+                  onPress={handleConfirm}
+                  disabled={confirmDisabled}>
+                  <Text variant="headlineM" color="#FFFFFF" style={styles.cancelButtonText}>
+                    취소하기
+                  </Text>
+                </TouchableOpacity>
+              </SafeAreaView>
+            ) : (
+              <View style={styles.modalFooter}>
+                <TouchableOpacity 
+                  style={[
+                    styles.cancelButton,
+                    confirmDisabled && styles.cancelButtonDisabled,
+                  ]}
+                  onPress={handleConfirm}
+                  disabled={confirmDisabled}>
+                  <Text variant="headlineM" color="#FFFFFF" style={styles.cancelButtonText}>
+                    취소하기
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
-        </ScrollView>
-
-        <View style={styles.modalFooter}>
-          <TouchableOpacity 
-            style={[
-              styles.cancelButton,
-              confirmDisabled && styles.cancelButtonDisabled,
-            ]}
-            onPress={handleConfirm}
-            disabled={confirmDisabled}>
-            <Text variant="headlineM" color="#FFFFFF" style={styles.cancelButtonText}>
-              취소하기
-            </Text>
-          </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaProvider>
     </Modal>
   );
 }
@@ -107,6 +129,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     margin: 0,
   },
+  modalWrapper: {
+    width: '100%',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
   modalContainer: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
@@ -114,7 +141,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderBottomWidth: 0,
-    height: 350,
+    height: 400,
     width: '100%',
   },
   modalHeader: {
@@ -142,7 +169,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalFooter: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 17,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',

@@ -4,6 +4,7 @@ import {
   LoginCredentials,
   RegisterData,
   AuthResponse,
+  UserSummaryResponse,
 } from '../types/user';
 
 export const userApi = {
@@ -48,5 +49,10 @@ export const userApi = {
 
   async deleteAccount(userId: string): Promise<void> {
     await apiClient.delete(`/users/${userId}`);
+  },
+
+  async getUserSummary(): Promise<UserSummaryResponse> {
+    const response = await apiClient.get('/users/summary');
+    return response.data;
   },
 };

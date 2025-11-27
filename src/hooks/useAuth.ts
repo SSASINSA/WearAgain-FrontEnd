@@ -1,6 +1,6 @@
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query';
 import {userApi} from '../api/userApi';
-import {LoginCredentials, RegisterData} from '../types/user';
+import {LoginCredentials, RegisterData, UserSummaryResponse} from '../types/user';
 
 export function useAuth() {
   return useQuery({
@@ -40,5 +40,12 @@ export function useLogout() {
     onSuccess: () => {
       queryClient.clear();
     },
+  });
+}
+
+export function useUserSummary() {
+  return useQuery({
+    queryKey: ['user', 'summary'],
+    queryFn: userApi.getUserSummary,
   });
 }
