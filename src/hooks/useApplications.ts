@@ -2,6 +2,7 @@ import {
   useInfiniteQuery,
   useMutation,
   useQuery,
+  useQueryClient,
 } from '@tanstack/react-query';
 import {applicationsApi} from '../api/events/applications';
 import {
@@ -12,6 +13,17 @@ import {
 } from '../screens/applications/types';
 import React from 'react';
 import {Alert} from 'react-native';
+
+type ApiError = {
+  response?: {
+    data?: {
+      code?: string;
+      errorCode?: string;
+      message?: string;
+      statusCode?: number;
+    };
+  };
+};
 
 function mapStatus(status?: string): ApplicationStatusLabel {
   switch (status) {
@@ -101,6 +113,8 @@ function toSummary(
     eventId: String(item.eventId),
     title: item.eventTitle,
     description: item.description,
+    eventStatusCode: item.eventStatus,
+    applicationStatusCode: item.applicationStatus ?? undefined,
     status: mapStatus(item.eventStatus ?? item.applicationStatus),
     startDate: item.eventPeriod.startDate,
     endDate: item.eventPeriod.endDate,
@@ -116,6 +130,8 @@ function toDetail(
   const base = toSummary(payload);
   return {
     ...base,
+    eventStatusCode: payload.eventStatus,
+    applicationStatusCode: payload.applicationStatus ?? undefined,
     usageGuide: normalizeText(payload.usageGuide),
     precautions: normalizeText(payload.precautions),
     optionTrail: mapOptionTrail(payload.optionTrail),
@@ -161,21 +177,28 @@ export function useApplicationDetail(
   });
 }
 
-export function useApplicationQr(applicationId: string) {
+export function useApplicationQr(
+  applicationId: string,
+  options?: {enabled?: boolean},
+) {
   const [qrToken, setQrToken] = React.useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = React.useState<number>(0);
+  const [errorInfo, setErrorInfo] = React.useState<QrErrorInfo | null>(null);
+  const enabled = options?.enabled ?? true;
 
   const {mutate, isPending} = useMutation({
     mutationFn: () => applicationsApi.issueApplicationQr(applicationId),
     onSuccess: data => {
       setQrToken(data.qrToken);
       setSecondsLeft(data.expiresIn);
+      setErrorInfo(null);
     },
-    onError: () => {
-      Alert.alert(
-        'QR 발급 실패',
-        'QR을 발급하지 못했습니다. 잠시 후 다시 시도해주세요.',
-      );
+    onError: error => {
+      setQrToken(null);
+      setSecondsLeft(0);
+
+      const errorInfo = buildQrErrorMessage(error);
+      setErrorInfo(errorInfo);
     },
   });
 
@@ -199,22 +222,113 @@ export function useApplicationQr(applicationId: string) {
     if (!applicationId || isPending) {
       return;
     }
+    if (!enabled) {
+      return;
+    }
+    setErrorInfo(null);
     mutate();
-  }, [applicationId, isPending, mutate]);
+  }, [applicationId, enabled, isPending, mutate]);
 
   React.useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     if (!applicationId) {
       return;
     }
     mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applicationId]);
+  }, [applicationId, enabled]);
 
   return {
     qrToken,
     secondsLeft,
     isIssuing: isPending,
     isExpired: !!qrToken && secondsLeft <= 0,
+    hasError: !!errorInfo,
+    errorMessage: errorInfo?.message ?? null,
+    isCompletedError: errorInfo?.state === 'completed',
+    errorState: errorInfo?.state ?? null,
+    isDisabled: !enabled,
     reissue,
   };
+}
+
+type QrErrorInfo = {
+  message: string;
+  state: 'completed' | 'ended' | 'canceled' | 'generic';
+};
+
+function buildQrErrorMessage(error: unknown): QrErrorInfo {
+  const apiError = error as ApiError;
+  const code =
+    apiError?.response?.data?.errorCode ?? apiError?.response?.data?.code;
+
+  if (typeof code === 'string' && code.startsWith('E')) {
+    if (code === 'E1019') {
+      return {
+        message: '이미 체크인이 완료된 신청이에요. 현장 직원에게 문의해 주세요.',
+        state: 'completed',
+      };
+    }
+    if (code === 'E1031' || code === 'E1030' || code === 'CLOSED') {
+      return {
+        message: '행사가 종료되어 QR을 발급할 수 없어요.',
+        state: 'ended',
+      };
+    }
+    if (code === 'E1032' || code === 'E1033') {
+      return {
+        message: '신청이 취소되어 QR을 발급할 수 없어요.',
+        state: 'canceled',
+      };
+    }
+  }
+
+  return {
+    message: 'QR을 발급하지 못했습니다. 잠시 후 다시 시도해주세요.',
+    state: 'generic',
+  };
+}
+
+export function useCancelApplication() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      applicationId,
+      body,
+      eventId,
+    }: {
+      applicationId: string;
+      body: applicationsApi.CancelApplicationRequest;
+      eventId?: string;
+    }) => applicationsApi.cancelApplication(applicationId, body),
+    onSuccess: (_, variables) => {
+      const {applicationId, eventId} = variables;
+
+      queryClient.invalidateQueries({
+        queryKey: ['applications', 'detail', applicationId],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ['applications', 'list'],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ['events', 'list'],
+      });
+
+      if (eventId) {
+        queryClient.invalidateQueries({
+          queryKey: ['events', 'detail', eventId],
+        });
+      } else {
+        queryClient.invalidateQueries({
+          queryKey: ['events', 'detail'],
+          exact: false,
+        });
+      }
+    },
+  });
 }

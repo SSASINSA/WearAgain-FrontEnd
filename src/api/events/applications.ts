@@ -45,6 +45,15 @@ export type ApplicationQrResponse = {
   expiresIn: number;
 };
 
+export type CancelApplicationRequest = {
+  reason: string;
+};
+
+export type CancelApplicationResponse = {
+  applicationId: number;
+  status: string;
+};
+
 const BASE_PATH = '/events/applications';
 
 export const applicationsApi = {
@@ -65,6 +74,14 @@ export const applicationsApi = {
   async issueApplicationQr(applicationId: string) {
     const {data} = await apiClient.post<ApplicationQrResponse>(
       `${BASE_PATH}/${applicationId}/qr`,
+    );
+    return data;
+  },
+
+  async cancelApplication(applicationId: string, body: CancelApplicationRequest) {
+    const {data} = await apiClient.patch<CancelApplicationResponse>(
+      `${BASE_PATH}/${applicationId}/cancel`,
+      body,
     );
     return data;
   },
