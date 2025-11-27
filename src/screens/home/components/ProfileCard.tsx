@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Text as CustomText } from '../../../components/common/Text';
 import ClothIcon from '../../../assets/icons/clothIcon.svg';
 import CreditIcon from '../../../assets/icons/creditIcon.svg';
 import TicketIcon from '../../../assets/icons/ticketIcon.svg';
+import { useUserSummary } from '../../../hooks/useAuth';
 
 interface UserStat {
   id: string;
@@ -12,17 +13,57 @@ interface UserStat {
   value: number;
 }
 
-interface UserStats {
-  level: number;
-  name: string;
-  stats: UserStat[];
-}
-interface ProfileCardProps {
-  userStats: UserStats;
-}
-
-export const ProfileCard: React.FC<ProfileCardProps> = ({ userStats }) => {
+export const ProfileCard: React.FC = () => {
   const navigation = useNavigation();
+  const { data: summary, isLoading: isSummaryLoading } = useUserSummary();
+
+  const isLoading = isSummaryLoading;
+
+  const userStats = React.useMemo(() => {
+    if (!summary) {
+      return {
+        name: '사용자',
+        stats: [
+          {
+            id: 'clothes',
+            label: '교환한 옷',
+            value: 0,
+          },
+          {
+            id: 'credit',
+            label: '크레딧',
+            value: 0,
+          },
+          {
+            id: 'ticket',
+            label: '교환 티켓',
+            value: 0,
+          },
+        ],
+      };
+    }
+
+    return {
+      name: summary.displayName || '사용자',
+      stats: [
+        {
+          id: 'clothes',
+          label: '교환한 옷',
+          value: summary.totalTicketChangeAmount,
+        },
+        {
+          id: 'credit',
+          label: '크레딧',
+          value: summary.creditBalance,
+        },
+        {
+          id: 'ticket',
+          label: '교환 티켓',
+          value: summary.ticketBalance,
+        },
+      ],
+    };
+  }, [summary]);
 
   const renderStatIcon = (statId: string) => {
     switch (statId) {
@@ -41,14 +82,19 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ userStats }) => {
     navigation.navigate('Growing' as never);
   };
 
+  if (isLoading) {
+    return (
+      <View style={[styles.profileCard, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#06B0B7" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.profileCard}>
       <View style={styles.profileHeader}>
-        <CustomText variant="bodyM" color="#555555">
-          Lv. {userStats.level}
-        </CustomText>
         <CustomText variant="headlineS" color="#111111" weight="bold">
-          {' '}{userStats.name} 님
+          {userStats.name} 연구원
         </CustomText>
       </View>
       
@@ -133,5 +179,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 200,
   },
 });
