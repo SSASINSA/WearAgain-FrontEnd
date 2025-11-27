@@ -1,5 +1,6 @@
 import React, {useMemo} from 'react';
 import {ScrollView, View, StyleSheet} from 'react-native';
+import Svg, {Path} from 'react-native-svg';
 import {Text} from '../../../components/common/Text';
 import OrderDateGroup from './OrderDateGroup';
 import {OrderItem} from './OrderCard';
@@ -62,6 +63,34 @@ const dummyOrders: (OrderItem & {orderDate: string})[] = [
   },
 ];
 
+function InfoIcon() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+      <Path
+        d="M10 18.3333C14.6024 18.3333 18.3333 14.6024 18.3333 10C18.3333 5.39763 14.6024 1.66667 10 1.66667C5.39763 1.66667 1.66667 5.39763 1.66667 10C1.66667 14.6024 5.39763 18.3333 10 18.3333Z"
+        stroke="#6B7280"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M10 13.3333V10"
+        stroke="#6B7280"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M10 6.66667H10.0083"
+        stroke="#6B7280"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 export default function OrderScreen() {
   // 주문일시별로 그룹화
   const groupedOrders = useMemo(() => {
@@ -102,9 +131,14 @@ export default function OrderScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         <View style={styles.noticeSection}>
-          <Text variant="bodyM" color="#6B7280" weight="regular">
-            주문 변경 및 취소는 다시입다로 문의주시기 바랍니다.
-          </Text>
+          <View style={styles.noticeContent}>
+            <View style={styles.noticeIcon}>
+              <InfoIcon />
+            </View>
+            <Text variant="bodyS" color="#374151" weight="regular" style={styles.noticeText}>
+              주문 변경 및 취소가 필요하시면 다시입다로 문의해 주세요
+            </Text>
+          </View>
         </View>
         {groupedOrders.map(([orderDate, orders], index) => (
           <OrderDateGroup
@@ -125,9 +159,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
   },
   noticeSection: {
-    backgroundColor: 'white',
     paddingHorizontal: 20,
     paddingTop: 20,
+    paddingBottom: 4,
+  },
+  noticeContent: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  noticeIcon: {
+    marginRight: 12,
+    justifyContent: 'center',
+  },
+  noticeText: {
+    flex: 1,
+    textAlignVertical: 'center',
   },
   scrollView: {
     flex: 1,

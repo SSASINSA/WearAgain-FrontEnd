@@ -85,3 +85,10 @@ export interface UserStats {
   averageRating: number;
   joinDate: string;
 }
+
+export interface UserSummaryResponse {
+  displayName: string;
+  ticketBalance: number;
+  creditBalance: number;
+  totalTicketChangeAmount: number;
+}
