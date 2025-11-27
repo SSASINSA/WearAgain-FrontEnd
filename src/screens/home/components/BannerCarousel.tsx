@@ -7,6 +7,7 @@ import {
   Alert,
   LayoutChangeEvent,
 } from 'react-native';
+import Svg, {Path} from 'react-native-svg';
 import {useFocusEffect} from '@react-navigation/native';
 import Carousel, {ICarouselInstance} from 'react-native-reanimated-carousel';
 import {Text as CustomText} from '../../../components/common/Text';
@@ -14,6 +15,19 @@ import SmsIcon from '../../../assets/icons/sms.svg';
 import VolunteerIcon from '../../../assets/icons/volunteerIcon.svg';
 import {useBannerStore} from '../../../store/banner.store';
 
+function ChevronRightIcon() {
+  return (
+    <Svg width={9} height={14} viewBox="0 0 9 14" fill="none">
+      <Path
+        d="M1 1.5 7 7l-6 5.5"
+        stroke="#FFFFFF"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 interface Banner {
   id: number;
   title: string;
@@ -119,7 +133,7 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
     }
   };
 
-  const handleBannerPress = async (link?: string) => {
+  const handleBannerPress = useCallback(async (link?: string) => {
     if (!link) {
       return;
     }
@@ -134,7 +148,7 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
     } catch (error) {
       Alert.alert('오류', '링크를 열 수 없습니다.');
     }
-  };
+  }, []);
 
   const handleTouchStart = useCallback(() => {
     setIsUserInteracting(true);
@@ -159,14 +173,16 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
   const renderBannerItem = useCallback(
     ({item}: {item: Banner}) => {
       return (
-        <View
+        <TouchableOpacity
           style={[
             styles.bannerItem,
             {
               backgroundColor: item.backgroundColor,
               width: bannerWidth,
             },
-          ]}>
+          ]}
+          onPress={() => handleBannerPress(item.link)}
+          activeOpacity={0.8}>
           <View style={styles.bannerContent}>
             <View style={styles.bannerIcon}>
               {renderBannerIcon(item.icon)}
@@ -177,23 +193,12 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
               style={styles.bannerText}>
               {item.title}
             </CustomText>
-            <TouchableOpacity
-              style={styles.bannerButton}
-              onPress={() => handleBannerPress(item.link)}
-              activeOpacity={0.8}>
-              <CustomText
-                variant="labelM"
-                color={item.backgroundColor}
-                weight="semiBold"
-                align="center">
-                {item.buttonText}
-              </CustomText>
-            </TouchableOpacity>
+            <ChevronRightIcon />
           </View>
-        </View>
+        </TouchableOpacity>
       );
     },
-    [bannerWidth]
+    [bannerWidth, handleBannerPress]
   );
 
   return (
@@ -211,6 +216,7 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
               data={banners}
               renderItem={renderBannerItem}
               width={itemWidth}
+              pagingEnabled={true}
               height={62}
               loop={true}
               autoPlay={isAutoPlayEnabled && !isUserInteracting}

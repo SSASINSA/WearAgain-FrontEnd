@@ -44,7 +44,7 @@ export default function StoreScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* 헤더 영역 */}
-      <StoreHeader credit={99999} />
+      <StoreHeader />
 
       <ScrollView
         contentContainerStyle={styles.listContainer}

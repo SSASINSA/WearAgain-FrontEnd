@@ -3,19 +3,21 @@ import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {Text} from '../../components/common/Text';
 import BackIcon from '../../assets/icons/back.svg';
+import {useUserSummary} from '../../hooks/useAuth';
 
 interface StoreHeaderProps {
-  credit?: number;
   showTitle?: boolean;
   backgroundColor?: string;
 }
 
 export default function StoreHeader({
-  credit = 1250,
   showTitle = true,
   backgroundColor = '#F2F2F2',
 }: StoreHeaderProps) {
   const navigation = useNavigation<any>();
+  const {data: summary} = useUserSummary();
+  
+  const creditBalance = summary?.creditBalance ?? 0;
 
   return (
     <View style={[styles.header, {backgroundColor}]}>
@@ -32,13 +34,13 @@ export default function StoreHeader({
       )}
 
       <View style={styles.creditPill}>
-        <Text variant="bodyM" color="#FFFFFF" style={styles.creditC}>
-          C
-        </Text>
-        <Text variant="bodyM" color="#FFFFFF">
-          {credit.toLocaleString()}
-        </Text>
-      </View>
+          <Text variant="bodyM" color="#FFFFFF" style={styles.creditC}>
+            C
+          </Text>
+          <Text variant="bodyM" color="#FFFFFF">
+            {creditBalance.toLocaleString()}
+          </Text>
+        </View>
     </View>
   );
 }
