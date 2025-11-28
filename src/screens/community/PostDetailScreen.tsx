@@ -1,11 +1,13 @@
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   Image,
   ImageSourcePropType,
   ScrollView,
   StyleSheet,
   View,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import DetailHeader from '../../components/common/DetailHeader';
@@ -14,6 +16,12 @@ import PostDetailCommentComponent, {
   Comment,
 } from './PostDetailCommentComponent';
 import PostDetailInputComponent from './PostDetailInputComponent';
+import {
+  getCommunityPostDetail,
+  CommunityPostDetail,
+  toggleCommunityPostLike,
+} from '../../api/communityApi';
+import {formatRelativeTime} from '../../utils/formatDate';
 
 export interface PostDetailProps {
   id: string;
@@ -44,23 +52,12 @@ export default function PostDetailScreen() {
   const route = useRoute<CommunityDetailRouteProp>();
   const {postId} = route.params;
   const [comment, setComment] = useState('');
+  const [postData, setPostData] = useState<CommunityPostDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [isLiking, setIsLiking] = useState(false);
 
-  // 샘플 데이터 (실제로는 postId를 기반으로 API에서 데이터를 가져와야 함)
-  const postData: PostDetailProps = {
-    id: postId,
-    author: '김민지',
-    timeAgo: '2시간 전',
-    title: '오늘 방문한 카페가 정말 예뻤어요!',
-    summary:
-      '오늘 방문한 카페가 정말 예뻤어요! 인테리어도 너무 좋고 커피 맛도 최고였습니다 ☕️',
-    image: require('../../assets/images/login/login-illustration.png'), // 임시 이미지
-    content:
-      '오늘 친구와 함께 새로 오픈한 카페에 다녀왔는데 정말 분위기가 좋았어요! 특히 라떼 아트가 너무 예쁘고 원두도 직접 로스팅해서 그런지 향이 정말 좋았습니다. 디저트로 먹은 티라미수도 달지 않고 부드러워서 커피와 잘 어울렸어요. 인테리어도 인스타그램에 올리기 좋게 꾸며져 있어서 사진도 많이 찍었네요 📸 다음에 또 가고 싶은 곳이에요!',
-    isLiked: false,
-    likeCount: 124,
-    commentCount: 23,
-  };
-
+  // 샘플 댓글 데이터 (댓글 API가 구현되면 교체 필요)
   const comments: Comment[] = [
     {
       id: '1',
@@ -69,7 +66,6 @@ export default function PostDetailScreen() {
       content:
         '인테리어 진짜 감각적이네요 👍 다음에 데이트 코스로 좋을 것 같아요',
     },
-
     {
       id: '2',
       author: '박준호',
@@ -86,13 +82,62 @@ export default function PostDetailScreen() {
     },
   ];
 
+  useEffect(() => {
+    const fetchPostDetail = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await getCommunityPostDetail(postId);
+        setPostData(data);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err
+            : new Error('게시물을 불러오는데 실패했습니다.');
+        setError(errorMessage);
+        console.error('Failed to fetch post detail:', err);
+        Alert.alert('오류', '게시물을 불러오는데 실패했습니다.', [
+          {
+            text: '확인',
+            onPress: () => navigation.goBack(),
+          },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPostDetail();
+  }, [postId, navigation]);
+
   const handleBackPress = () => {
     navigation.goBack();
   };
 
-  const handleLikePress = () => {
-    console.log('좋아요 클릭');
-    // TODO: 좋아요 API 호출
+  const handleLikePress = async () => {
+    if (isLiking || !postData) {
+      return; // 이미 처리 중이거나 postData가 없는 경우 중복 요청 방지
+    }
+
+    try {
+      setIsLiking(true);
+      const response = await toggleCommunityPostLike(postId);
+
+      // postData 상태 업데이트
+      setPostData(prev =>
+        prev
+          ? {
+              ...prev,
+              isLiked: response.isLiked,
+              likeCount: response.likeCount,
+            }
+          : null,
+      );
+    } catch (error) {
+      console.error('Failed to toggle like:', error);
+    } finally {
+      setIsLiking(false);
+    }
   };
 
   const handleSendComment = () => {
@@ -100,6 +145,30 @@ export default function PostDetailScreen() {
     setComment('');
     // TODO: 댓글 API 호출
   };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <DetailHeader />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#06b0b7" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !postData) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <DetailHeader />
+        <View style={styles.errorContainer}>
+          <Text variant="bodyM" color="#6B7280">
+            게시물을 불러올 수 없습니다.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -114,15 +183,15 @@ export default function PostDetailScreen() {
           <View style={styles.authorInfo}>
             <View style={[styles.categoryTag, {backgroundColor: '#06b0b7'}]}>
               <Text variant="bodyS" color="#FFFFFF" align="center">
-                질문
+                {postData.keyword}
               </Text>
             </View>
             <View style={styles.authorDetails}>
               <Text variant="bodyM" color="#111827">
-                {postData.author}
+                {postData.author.name}
               </Text>
               <Text variant="bodyS" color="#6B7280" style={styles.timeAgo}>
-                {postData.timeAgo}
+                {formatRelativeTime(postData.createdAt)}
               </Text>
             </View>
           </View>
@@ -139,13 +208,15 @@ export default function PostDetailScreen() {
         <View style={styles.divider} />
 
         {/* 이미지 영역 */}
-        <View style={styles.imageSection}>
-          <Image
-            source={postData.image}
-            style={styles.image}
-            resizeMode="cover"
-          />
-        </View>
+        {postData.imageUrl && (
+          <View style={styles.imageSection}>
+            <Image
+              source={{uri: postData.imageUrl}}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          </View>
+        )}
 
         {/* 본문 영역 */}
         <View style={styles.contentSection}>
@@ -274,5 +345,15 @@ const styles = StyleSheet.create({
   },
   actionIcon: {
     marginRight: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

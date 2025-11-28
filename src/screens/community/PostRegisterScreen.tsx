@@ -52,7 +52,7 @@ export default function PostRegisterScreen() {
   const contentInputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const keywords: string[] = ['수선', '질문', '기타'];
+  const keywords: string[] = ['후기', '수선', '질문', '기타'];
 
   const requestPermissions = async (): Promise<boolean> => {
     if (Platform.OS === 'android') {

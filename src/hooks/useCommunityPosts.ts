@@ -75,6 +75,14 @@ export function useCommunityPosts(options: UseCommunityPostsOptions = {}) {
     fetchPosts(null, false);
   }, [fetchPosts]);
 
+  const updatePost = useCallback((postId: string, updates: Partial<CommunityPost>) => {
+    setPosts(prev =>
+      prev.map(post =>
+        post.id.toString() === postId ? {...post, ...updates} : post,
+      ),
+    );
+  }, []);
+
   return {
     posts,
     isLoading,
@@ -83,5 +91,6 @@ export function useCommunityPosts(options: UseCommunityPostsOptions = {}) {
     error,
     loadMore,
     refresh,
+    updatePost,
   };
 }

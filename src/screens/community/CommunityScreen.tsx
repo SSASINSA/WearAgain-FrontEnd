@@ -1,10 +1,10 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {View, StyleSheet, FlatList, TouchableOpacity} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {PostItemComponent, PostItemProps} from './PostItemComponent';
 import {useCommunityPosts} from '../../hooks/useCommunityPosts';
-import {CommunityPost} from '../../api/communityApi';
+import {CommunityPost, toggleCommunityPostLike} from '../../api/communityApi';
 import {formatRelativeTime} from '../../utils/formatDate';
 import PlusIcon from '../../assets/icons/plus.svg';
 
@@ -26,10 +26,18 @@ function mapPostToItemProps(post: CommunityPost): PostItemProps {
 
 export default function CommunityScreen() {
   const navigation = useNavigation<any>();
-  const {posts, isLoading, isRefreshing, hasNext, loadMore, refresh} =
-    useCommunityPosts({
-      limit: 10,
-    });
+  const {
+    posts,
+    isLoading,
+    isRefreshing,
+    hasNext,
+    loadMore,
+    refresh,
+    updatePost,
+  } = useCommunityPosts({
+    limit: 10,
+  });
+  const [likingPostIds, setLikingPostIds] = useState<Set<string>>(new Set());
 
   // 화면이 포커스될 때 리프레시
   useFocusEffect(
@@ -43,9 +51,29 @@ export default function CommunityScreen() {
     navigation.navigate('PostDetail', {postId});
   };
 
-  const handleLikePress = (postId: string) => {
-    console.log('좋아요 클릭:', postId);
-    // TODO: 좋아요 API 호출
+  const handleLikePress = async (postId: string) => {
+    if (likingPostIds.has(postId)) {
+      return; // 이미 처리 중인 경우 중복 요청 방지
+    }
+
+    try {
+      setLikingPostIds(prev => new Set(prev).add(postId));
+      const response = await toggleCommunityPostLike(postId);
+
+      // posts 배열에서 해당 post 업데이트
+      updatePost(postId, {
+        isLiked: response.isLiked,
+        likeCount: response.likeCount,
+      });
+    } catch (error) {
+      console.error('Failed to toggle like:', error);
+    } finally {
+      setLikingPostIds(prev => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+    }
   };
 
   const handleCommentPress = (postId: string) => {
