@@ -1,5 +1,10 @@
-import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
-import React, {useState, useEffect} from 'react';
+import {
+  RouteProp,
+  useNavigation,
+  useRoute,
+  useFocusEffect,
+} from '@react-navigation/native';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   Image,
   ImageSourcePropType,
@@ -54,7 +59,7 @@ type CommunityDetailRouteProp = RouteProp<
 >;
 
 export default function PostDetailScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const route = useRoute<CommunityDetailRouteProp>();
   const {postId} = route.params;
   const [comment, setComment] = useState('');
@@ -89,8 +94,8 @@ export default function PostDetailScreen() {
     },
   ];
 
-  useEffect(() => {
-    const fetchPostDetail = async () => {
+  const fetchPostDetail = useCallback(
+    async (showErrorAlert: boolean = true) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -102,19 +107,33 @@ export default function PostDetailScreen() {
           err?.response?.data?.message ||
           err?.message ||
           '게시물을 불러오는데 실패했습니다.';
-        Alert.alert('오류', errorMessage, [
-          {
-            text: '확인',
-            onPress: () => navigation.goBack(),
-          },
-        ]);
+        // 에러 알림 표시 여부를 파라미터로 제어
+        if (showErrorAlert) {
+          Alert.alert('오류', errorMessage, [
+            {
+              text: '확인',
+              onPress: () => navigation.goBack(),
+            },
+          ]);
+        }
       } finally {
         setIsLoading(false);
       }
-    };
+    },
+    [postId, navigation],
+  );
 
-    fetchPostDetail();
-  }, [postId, navigation]);
+  // 초기 로드
+  useEffect(() => {
+    fetchPostDetail(true);
+  }, [postId, fetchPostDetail]);
+
+  // 화면이 포커스될 때마다 데이터 리프레시 (에러 알림 없이)
+  useFocusEffect(
+    useCallback(() => {
+      fetchPostDetail(false);
+    }, [fetchPostDetail]),
+  );
 
   const handleBackPress = () => {
     navigation.goBack();
@@ -167,9 +186,7 @@ export default function PostDetailScreen() {
 
   const handleEdit = () => {
     setIsMenuVisible(false);
-    // TODO: 수정 화면으로 네비게이션
-    console.log('수정하기:', postId);
-    Alert.alert('알림', '수정 기능은 추후 구현 예정입니다.');
+    navigation.navigate('PostEdit', {postId});
   };
 
   const handleDelete = () => {
