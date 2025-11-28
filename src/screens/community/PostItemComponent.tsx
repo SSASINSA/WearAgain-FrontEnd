@@ -13,7 +13,7 @@ import CommentIcon from '../../assets/icons/comment.svg';
 
 export interface PostItemProps {
   id: string;
-  category: '질문' | '후기';
+  category: string;
   author: string;
   timeAgo: string;
   title: string;
