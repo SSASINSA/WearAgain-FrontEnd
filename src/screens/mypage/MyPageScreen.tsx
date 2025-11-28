@@ -30,9 +30,7 @@ function MenuItem({label, icon, onPress, showDivider = true}: MenuItemProps) {
       style={[styles.menuItem, showDivider && styles.menuDivider]}
       onPress={onPress}>
       <View style={styles.menuLeft}>
-        <View style={styles.iconContainer}>
-          {icon}
-        </View>
+        <View style={styles.iconContainer}>{icon}</View>
         <Text variant="bodyM" color="#1F2937" style={styles.menuLabel}>
           {label}
         </Text>
@@ -47,7 +45,10 @@ export default function MyPageScreen() {
   const logout = useAuthStore(state => state.logout);
   const {data: summary} = useUserSummary();
 
-  const displayName = useMemo(() => summary?.displayName ?? '사용자', [summary?.displayName]);
+  const displayName = useMemo(
+    () => summary?.displayName ?? '사용자',
+    [summary?.displayName],
+  );
 
   const handlePressApplications = () => {
     const tabNavigation = navigation.getParent();
@@ -76,11 +77,11 @@ export default function MyPageScreen() {
   };
 
   const handlePressMyPosts = () => {
-    Alert.alert('안내', '내가 쓴 글 화면은 준비 중입니다.');
+    navigation.navigate('MyPosts' as never);
   };
 
   const handlePressMyComments = () => {
-    Alert.alert('안내', '댓글 단 글 화면은 준비 중입니다.');
+    navigation.navigate('MyComments' as never);
   };
 
   const handlePressInquiry = () => {
@@ -111,96 +112,96 @@ export default function MyPageScreen() {
   };
 
   return (
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        <View style={styles.greetingCard}>
-          <View style={styles.greetingTextContainer}>
-            <Text variant="bodyL" weight="semiBold" color="#111827">
-              {displayName}
-            </Text>
-            <Text variant="bodyM" color="#6B7280">
-              님 반갑습니다.
-            </Text>
-          </View>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <LogoutIcon />
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity style={styles.promoCard} onPress={handlePressPromo}>
-          <Image source={PromoImage} style={styles.promoImage} />
-          <Text variant="bodyM" color="#111827">
-            21% 파티란 ?
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
+      <View style={styles.greetingCard}>
+        <View style={styles.greetingTextContainer}>
+          <Text variant="bodyL" weight="semiBold" color="#111827">
+            {displayName}
           </Text>
+          <Text variant="bodyM" color="#6B7280">
+            님 반갑습니다.
+          </Text>
+        </View>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <LogoutIcon />
         </TouchableOpacity>
+      </View>
 
-        <View style={styles.section}>
-          <Text variant="bodyM" weight="semiBold" color="#111827">
-            계정
-          </Text>
-          <View style={styles.menuGroup}>
-            <MenuItem
-              label="내정보"
-              icon={<ProfileIcon />}
-              onPress={handlePressProfile}
-            />
-            <MenuItem
-              label="신청 내역"
-              icon={<TicketIcon width={20} height={20} />}
-              onPress={handlePressApplications}
-            />
-            <MenuItem
-              label="주문 내역"
-              icon={<ReceiptIcon width={15} height={15} />}
-              onPress={handlePressOrders}
-              showDivider={false}
-            />
-          </View>
-        </View>
+      <TouchableOpacity style={styles.promoCard} onPress={handlePressPromo}>
+        <Image source={PromoImage} style={styles.promoImage} />
+        <Text variant="bodyM" color="#111827">
+          21% 파티란 ?
+        </Text>
+      </TouchableOpacity>
 
-        <View style={styles.section}>
-          <Text variant="bodyM" weight="semiBold" color="#111827">
-            커뮤니티
-          </Text>
-          <View style={styles.menuGroup}>
-            <MenuItem
-              label="내가 쓴 글"
-              icon={<MyPostIcon />}
-              onPress={handlePressMyPosts}
-            />
-            <MenuItem
-              label="댓글 단 글"
-              icon={<CommentIcon width={20} height={20} />}
-              onPress={handlePressMyComments}
-            />
-          </View>
+      <View style={styles.section}>
+        <Text variant="bodyM" weight="semiBold" color="#111827">
+          계정
+        </Text>
+        <View style={styles.menuGroup}>
+          <MenuItem
+            label="내정보"
+            icon={<ProfileIcon />}
+            onPress={handlePressProfile}
+          />
+          <MenuItem
+            label="신청 내역"
+            icon={<TicketIcon width={20} height={20} />}
+            onPress={handlePressApplications}
+          />
+          <MenuItem
+            label="주문 내역"
+            icon={<ReceiptIcon width={15} height={15} />}
+            onPress={handlePressOrders}
+            showDivider={false}
+          />
         </View>
+      </View>
 
-        <View style={styles.section}>
-          <Text variant="bodyM" weight="semiBold" color="#111827">
-            기타
-          </Text>
-          <View style={styles.menuGroup}>
-            <MenuItem
-              label="문의하기"
-              icon={<QuestionIcon />}
-              onPress={handlePressInquiry}
-            />
-            <MenuItem
-              label="서비스 이용 약관"
-              icon={<DocumentIcon />}
-              onPress={handlePressTerms}
-            />
-            <MenuItem
-              label="오픈소스 라이센스"
-              icon={<CodeIcon />}
-              onPress={handlePressOss}
-              showDivider={false}
-            />
-          </View>
+      <View style={styles.section}>
+        <Text variant="bodyM" weight="semiBold" color="#111827">
+          커뮤니티
+        </Text>
+        <View style={styles.menuGroup}>
+          <MenuItem
+            label="내가 쓴 글"
+            icon={<MyPostIcon />}
+            onPress={handlePressMyPosts}
+          />
+          <MenuItem
+            label="댓글 단 글"
+            icon={<CommentIcon width={20} height={20} />}
+            onPress={handlePressMyComments}
+          />
         </View>
-      </ScrollView>
+      </View>
+
+      <View style={styles.section}>
+        <Text variant="bodyM" weight="semiBold" color="#111827">
+          기타
+        </Text>
+        <View style={styles.menuGroup}>
+          <MenuItem
+            label="문의하기"
+            icon={<QuestionIcon />}
+            onPress={handlePressInquiry}
+          />
+          <MenuItem
+            label="서비스 이용 약관"
+            icon={<DocumentIcon />}
+            onPress={handlePressTerms}
+          />
+          <MenuItem
+            label="오픈소스 라이센스"
+            icon={<CodeIcon />}
+            onPress={handlePressOss}
+            showDivider={false}
+          />
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 

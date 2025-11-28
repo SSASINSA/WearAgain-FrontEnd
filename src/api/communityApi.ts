@@ -253,3 +253,53 @@ export async function getPostKeywords(): Promise<string[]> {
   );
   return response.data?.keywords ?? [];
 }
+
+export interface GetUserPostsParams {
+  cursor?: number | null;
+  limit?: number;
+}
+
+export async function getMyPosts(
+  params: GetUserPostsParams = {},
+): Promise<CommunityPostsResponse> {
+  const {cursor, limit} = params;
+
+  const queryParams: Record<string, string | number> = {};
+
+  if (limit !== undefined && limit !== null) {
+    queryParams.limit = limit;
+  }
+
+  if (cursor !== undefined && cursor !== null) {
+    queryParams.cursor = cursor;
+  }
+
+  const response = await apiClient.get<CommunityPostsResponse>('/users/posts', {
+    params: queryParams,
+  });
+
+  return response.data;
+}
+
+export async function getMyComments(
+  params: GetUserPostsParams = {},
+): Promise<CommunityPostsResponse> {
+  const {cursor, limit} = params;
+
+  const queryParams: Record<string, string | number> = {};
+
+  if (limit !== undefined && limit !== null) {
+    queryParams.limit = limit;
+  }
+
+  if (cursor !== undefined && cursor !== null) {
+    queryParams.cursor = cursor;
+  }
+
+  const response = await apiClient.get<CommunityPostsResponse>(
+    '/users/comments',
+    {params: queryParams},
+  );
+
+  return response.data;
+}
