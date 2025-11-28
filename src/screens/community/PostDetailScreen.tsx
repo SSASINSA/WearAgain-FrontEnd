@@ -8,8 +8,11 @@ import {
   View,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import Modal from 'react-native-modal';
 import DetailHeader from '../../components/common/DetailHeader';
 import {Text} from '../../components/common/Text';
 import PostDetailCommentComponent, {
@@ -20,8 +23,11 @@ import {
   getCommunityPostDetail,
   CommunityPostDetail,
   toggleCommunityPostLike,
+  deleteCommunityPost,
+  reportCommunityPost,
 } from '../../api/communityApi';
 import {formatRelativeTime} from '../../utils/formatDate';
+import MoreHorizIcon from '../../assets/icons/more_horiz.svg';
 
 export interface PostDetailProps {
   id: string;
@@ -56,6 +62,7 @@ export default function PostDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isLiking, setIsLiking] = useState(false);
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
 
   // 샘플 댓글 데이터 (댓글 API가 구현되면 교체 필요)
   const comments: Comment[] = [
@@ -89,14 +96,13 @@ export default function PostDetailScreen() {
         setError(null);
         const data = await getCommunityPostDetail(postId);
         setPostData(data);
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err
-            : new Error('게시물을 불러오는데 실패했습니다.');
-        setError(errorMessage);
+      } catch (err: any) {
         console.error('Failed to fetch post detail:', err);
-        Alert.alert('오류', '게시물을 불러오는데 실패했습니다.', [
+        const errorMessage =
+          err?.response?.data?.message ||
+          err?.message ||
+          '게시물을 불러오는데 실패했습니다.';
+        Alert.alert('오류', errorMessage, [
           {
             text: '확인',
             onPress: () => navigation.goBack(),
@@ -133,8 +139,13 @@ export default function PostDetailScreen() {
             }
           : null,
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to toggle like:', error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        '좋아요 처리에 실패했습니다.';
+      Alert.alert('오류', errorMessage);
     } finally {
       setIsLiking(false);
     }
@@ -144,6 +155,82 @@ export default function PostDetailScreen() {
     console.log('댓글 전송:', comment);
     setComment('');
     // TODO: 댓글 API 호출
+  };
+
+  const handleMenuPress = () => {
+    setIsMenuVisible(true);
+  };
+
+  const handleCloseMenu = () => {
+    setIsMenuVisible(false);
+  };
+
+  const handleEdit = () => {
+    setIsMenuVisible(false);
+    // TODO: 수정 화면으로 네비게이션
+    console.log('수정하기:', postId);
+    Alert.alert('알림', '수정 기능은 추후 구현 예정입니다.');
+  };
+
+  const handleDelete = () => {
+    setIsMenuVisible(false);
+    Alert.alert('삭제', '정말 삭제하시겠습니까?', [
+      {
+        text: '취소',
+        style: 'cancel',
+      },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteCommunityPost(postId);
+            Alert.alert('완료', '게시물이 삭제되었습니다.', [
+              {
+                text: '확인',
+                onPress: () => navigation.goBack(),
+              },
+            ]);
+          } catch (error: any) {
+            console.error('Failed to delete post:', error);
+            const errorMessage =
+              error?.response?.data?.message ||
+              error?.message ||
+              '게시물 삭제에 실패했습니다.';
+            Alert.alert('오류', errorMessage);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleReport = () => {
+    setIsMenuVisible(false);
+    Alert.alert('신고', '이 게시물을 신고하시겠습니까?', [
+      {
+        text: '취소',
+        style: 'cancel',
+      },
+      {
+        text: '신고',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            // 기본 신고 사유 (추후 사용자 입력으로 변경 가능)
+            const reason = '부적절한 게시물';
+            await reportCommunityPost(postId, reason);
+            Alert.alert('완료', '신고가 접수되었습니다.');
+          } catch (error: any) {
+            console.error('Failed to report post:', error);
+            const errorMessage =
+              error?.response?.data?.message ||
+              error?.message ||
+              '신고 처리에 실패했습니다.';
+            Alert.alert('오류', errorMessage);
+          }
+        },
+      },
+    ]);
   };
 
   if (isLoading) {
@@ -173,7 +260,17 @@ export default function PostDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* 헤더 영역 */}
-      <DetailHeader />
+      <DetailHeader
+        rightElement={
+          <TouchableOpacity
+            style={styles.menuButton}
+            onPress={handleMenuPress}
+            accessibilityRole="button"
+            accessibilityLabel="더보기 메뉴">
+            <MoreHorizIcon width={24} height={24} color="#111827" />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -240,6 +337,61 @@ export default function PostDetailScreen() {
         onLikePress={handleLikePress}
         placeholder="댓글을 입력하세요..."
       />
+
+      {/* 메뉴 모달 */}
+      <Modal
+        isVisible={isMenuVisible}
+        onBackdropPress={handleCloseMenu}
+        onBackButtonPress={handleCloseMenu}
+        style={styles.modal}
+        backdropOpacity={0.5}
+        animationIn="fadeIn"
+        animationOut="fadeOut"
+        backdropTransitionInTiming={0}
+        backdropTransitionOutTiming={0}
+        hideModalContentWhileAnimating>
+        <View style={styles.menuContainer}>
+          {postData.isMine && (
+            <>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={handleEdit}
+                activeOpacity={0.7}>
+                <Text variant="bodyM" color="#111827">
+                  수정
+                </Text>
+              </TouchableOpacity>
+              <View style={styles.menuDivider} />
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={handleDelete}
+                activeOpacity={0.7}>
+                <Text variant="bodyM" color="#E30505">
+                  삭제
+                </Text>
+              </TouchableOpacity>
+              <View style={styles.menuDivider} />
+            </>
+          )}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleReport}
+            activeOpacity={0.7}>
+            <Text variant="bodyM" color="#111827">
+              신고하기
+            </Text>
+          </TouchableOpacity>
+          <View style={styles.menuDivider} />
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemLast]}
+            onPress={handleCloseMenu}
+            activeOpacity={0.7}>
+            <Text variant="bodyM" color="#6B7280">
+              취소
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -355,5 +507,34 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  menuButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modal: {
+    justifyContent: 'flex-end',
+    margin: 0,
+  },
+  menuContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 20,
+  },
+  menuItem: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  menuItemLast: {
+    paddingTop: 8,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 20,
   },
 });
