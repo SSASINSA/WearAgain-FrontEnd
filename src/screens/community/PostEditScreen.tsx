@@ -26,6 +26,7 @@ import {
   updateCommunityPost,
   getCommunityPostDetail,
   CommunityPostDetail,
+  getPostKeywords,
 } from '../../api/communityApi';
 
 type PostEditParamList = {
@@ -61,12 +62,26 @@ export default function PostEditScreen() {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [keywords, setKeywords] = useState<string[]>([]);
 
   const titleInputRef = useRef<TextInput>(null);
   const contentInputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const keywords: string[] = ['후기', '수선', '질문', '기타'];
+  useEffect(() => {
+    const fetchKeywords = async () => {
+      try {
+        const keywordsList = await getPostKeywords();
+        setKeywords(keywordsList);
+      } catch (error) {
+        console.error('Failed to fetch keywords:', error);
+        // 기본값으로 폴백
+        setKeywords(['후기', '수선', '질문', '기타']);
+      }
+    };
+
+    fetchKeywords();
+  }, []);
 
   useEffect(() => {
     const fetchPostData = async () => {
@@ -679,4 +694,3 @@ const styles = StyleSheet.create({
     height: '100%',
   },
 });
-
