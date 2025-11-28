@@ -101,3 +101,42 @@ export async function createCommunityPost(
 ): Promise<void> {
   await apiClient.post('/community/posts', data);
 }
+
+export interface CommunityPostDetail {
+  id: number;
+  imageUrl: string | null;
+  author: CommunityPostAuthor;
+  createdAt: string;
+  title: string;
+  content: string;
+  likeCount: number;
+  commentCount: number;
+  keyword: string;
+  isMine: boolean;
+  isLiked: boolean;
+}
+
+export async function getCommunityPostDetail(
+  postId: string,
+): Promise<CommunityPostDetail> {
+  const response = await apiClient.get<CommunityPostDetail>(
+    `/community/posts/${postId}`,
+  );
+
+  return response.data;
+}
+
+export interface ToggleLikeResponse {
+  isLiked: boolean;
+  likeCount: number;
+}
+
+export async function toggleCommunityPostLike(
+  postId: string,
+): Promise<ToggleLikeResponse> {
+  const response = await apiClient.post<ToggleLikeResponse>(
+    `/community/posts/${postId}/likes`,
+  );
+
+  return response.data;
+}
