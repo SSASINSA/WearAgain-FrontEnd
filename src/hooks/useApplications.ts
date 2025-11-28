@@ -4,7 +4,9 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import {applicationsApi} from '../api/events/applications';
+import {
+  applicationsApi
+} from '../api/events/applications';
 import {
   ApplicationDetail,
   ApplicationOption,
@@ -12,7 +14,9 @@ import {
   ApplicationSummary,
 } from '../screens/applications/types';
 import React from 'react';
-import {Alert} from 'react-native';
+import {
+  Alert
+} from 'react-native';
 
 type ApiError = {
   response?: {
@@ -141,8 +145,12 @@ function toDetail(
 export function useApplicationsList() {
   return useInfiniteQuery({
     queryKey: ['applications', 'list'],
-    queryFn: ({pageParam}) =>
-      applicationsApi.getApplications({cursor: pageParam ?? undefined}),
+    queryFn: ({
+        pageParam
+      }) =>
+      applicationsApi.getApplications({
+        cursor: pageParam ?? undefined
+      }),
     getNextPageParam: lastPage =>
       lastPage.hasNext ? lastPage.nextCursor ?? undefined : undefined,
     select: data => ({
@@ -177,14 +185,21 @@ export function useApplicationDetail(
   });
 }
 
+type UseApplicationQrOptions = {
+  enabled?: boolean;
+  fallbackError?: QrErrorInfo;
+};
+
 export function useApplicationQr(
   applicationId: string,
-  options?: {enabled?: boolean},
+  options?: UseApplicationQrOptions,
 ) {
+  const enabled = options?.enabled ?? true;
   const [qrToken, setQrToken] = React.useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = React.useState<number>(0);
-  const [errorInfo, setErrorInfo] = React.useState<QrErrorInfo | null>(null);
-  const enabled = options?.enabled ?? true;
+  const [errorInfo, setErrorInfo] = React.useState<QrErrorInfo | null>(
+    enabled ? null : options?.fallbackError ?? null,
+  );
 
   const {mutate, isPending} = useMutation({
     mutationFn: () => applicationsApi.issueApplicationQr(applicationId),
@@ -197,8 +212,8 @@ export function useApplicationQr(
       setQrToken(null);
       setSecondsLeft(0);
 
-      const errorInfo = buildQrErrorMessage(error);
-      setErrorInfo(errorInfo);
+      const nextError = buildQrErrorMessage(error);
+      setErrorInfo(nextError);
     },
   });
 
@@ -231,6 +246,7 @@ export function useApplicationQr(
 
   React.useEffect(() => {
     if (!enabled) {
+      setErrorInfo(options?.fallbackError ?? null);
       return;
     }
     if (!applicationId) {
@@ -263,26 +279,40 @@ function buildQrErrorMessage(error: unknown): QrErrorInfo {
   const apiError = error as ApiError;
   const code =
     apiError?.response?.data?.errorCode ?? apiError?.response?.data?.code;
+  const statusCode = apiError?.response?.data?.statusCode;
 
   if (typeof code === 'string' && code.startsWith('E')) {
-    if (code === 'E1019') {
-      return {
-        message: '이미 체크인이 완료된 신청이에요. 현장 직원에게 문의해 주세요.',
-        state: 'completed',
-      };
-    }
-    if (code === 'E1031' || code === 'E1030' || code === 'CLOSED') {
-      return {
-        message: '행사가 종료되어 QR을 발급할 수 없어요.',
-        state: 'ended',
-      };
-    }
-    if (code === 'E1032' || code === 'E1033') {
-      return {
-        message: '신청이 취소되어 QR을 발급할 수 없어요.',
-        state: 'canceled',
-      };
-    }
+    return mapQrErrorCode(code);
+  }
+
+  if (typeof statusCode === 'string' && statusCode.toUpperCase() === 'CLOSED') {
+    return mapQrErrorCode('E1031');
+  }
+
+  return {
+    message: 'QR을 발급하지 못했습니다. 잠시 후 다시 시도해주세요.',
+    state: 'generic',
+  };
+}
+
+function mapQrErrorCode(code: string): QrErrorInfo {
+  if (code === 'E1019') {
+    return {
+      message: '이미 체크인이 완료된 신청이에요. 현장 직원에게 문의해 주세요.',
+      state: 'completed',
+    };
+  }
+  if (code === 'E1031' || code === 'E1030') {
+    return {
+      message: '행사가 종료되어 QR을 발급할 수 없어요.',
+      state: 'ended',
+    };
+  }
+  if (code === 'E1032' || code === 'E1033') {
+    return {
+      message: '신청이 취소되어 QR을 발급할 수 없어요.',
+      state: 'canceled',
+    };
   }
 
   return {
@@ -305,7 +335,10 @@ export function useCancelApplication() {
       eventId?: string;
     }) => applicationsApi.cancelApplication(applicationId, body),
     onSuccess: (_, variables) => {
-      const {applicationId, eventId} = variables;
+      const {
+        applicationId,
+        eventId
+      } = variables;
 
       queryClient.invalidateQueries({
         queryKey: ['applications', 'detail', applicationId],

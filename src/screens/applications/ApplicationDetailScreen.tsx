@@ -35,16 +35,16 @@ export default function ApplicationDetailScreen() {
     params: {applicationId, initialData},
   } = useRoute<DetailRouteProp>();
 
-  const initialEventStatusCode = initialData?.eventStatusCode?.toUpperCase();
-  const initialEventStatusLabel = initialData?.status;
-  const initialIsClosed =
-    initialEventStatusCode === 'CLOSED' ||
-    initialEventStatusCode === 'FINISHED' ||
-    initialEventStatusCode === 'ENDED' ||
-    initialEventStatusLabel === '종료';
-
   const {data, isLoading, isError, refetch, isFetching} =
     useApplicationDetail(applicationId, initialData);
+
+  const {
+    eventStatusCode,
+    applicationStatusCode,
+    statusLabel,
+    isClosed,
+    isApplied,
+  } = resolveStatuses(data, initialData);
 
   const {
     qrToken,
@@ -56,7 +56,7 @@ export default function ApplicationDetailScreen() {
     errorState,
     isDisabled: isQrDisabled,
     reissue,
-  } = useApplicationQr(applicationId, {enabled: !initialIsClosed});
+  } = useApplicationQr(applicationId, {enabled: !isClosed});
 
   const [showModal, setShowModal] = React.useState(false);
   const [showCancelModal, setShowCancelModal] = React.useState(false);
@@ -70,13 +70,9 @@ export default function ApplicationDetailScreen() {
       : '--:--';
 
   const isCancelable = React.useMemo(() => {
-    const eventCode = data.eventStatusCode?.toUpperCase();
-    const applicationCode = data.applicationStatusCode?.toUpperCase();
-    const isEventOpen = eventCode === 'OPEN' || eventCode === 'RUNNING';
-    const isApplied =
-      applicationCode === 'APPLIED' || (!applicationCode && data.status === '진행중');
+    const isEventOpen = eventStatusCode === 'OPEN' || eventStatusCode === 'RUNNING';
     return isEventOpen && isApplied;
-  }, [data.applicationStatusCode, data.eventStatusCode, data.status]);
+  }, [eventStatusCode, isApplied]);
 
   const handleOpenModal = () => {
     if (qrToken && !qrError) {
@@ -108,14 +104,9 @@ export default function ApplicationDetailScreen() {
     );
   };
 
-  const isEventClosed =
-    data.eventStatusCode?.toUpperCase() === 'CLOSED' ||
-    data.eventStatusCode?.toUpperCase() === 'FINISHED' ||
-    data.eventStatusCode?.toUpperCase() === 'ENDED';
-
-  const showQrError = (qrError && !isIssuing) || isEventClosed || isQrDisabled;
+  const showQrError = (qrError && !isIssuing) || isClosed || isQrDisabled;
   const qrVariant = getQrErrorVariant(
-    isEventClosed ? 'ended' : errorState,
+    isClosed ? 'ended' : errorState,
     qrErrorMessage,
   );
 
@@ -417,6 +408,35 @@ function getQrErrorVariant(state: QrErrorState, message?: string | null) {
   } as const;
 
   return variants[state ?? 'generic'];
+}
+
+function resolveStatuses(
+  detail?: ReturnType<typeof useApplicationDetail>['data'],
+  initial?: DetailRouteProp['params']['initialData'],
+) {
+  const eventStatusCode = (detail?.eventStatusCode ?? initial?.eventStatusCode)?.toUpperCase();
+  const applicationStatusCode = (
+    detail?.applicationStatusCode ?? initial?.applicationStatusCode
+  )?.toUpperCase();
+  const statusLabel = detail?.status ?? initial?.status;
+
+  const isClosed =
+    eventStatusCode === 'CLOSED' ||
+    eventStatusCode === 'FINISHED' ||
+    eventStatusCode === 'ENDED' ||
+    statusLabel === '종료';
+
+  const isApplied =
+    applicationStatusCode === 'APPLIED' ||
+    (!applicationStatusCode && statusLabel === '진행중');
+
+  return {
+    eventStatusCode,
+    applicationStatusCode,
+    statusLabel,
+    isClosed,
+    isApplied,
+  };
 }
 
 const styles = StyleSheet.create({

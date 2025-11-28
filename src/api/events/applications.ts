@@ -46,7 +46,7 @@ export type ApplicationQrResponse = {
 };
 
 export type CancelApplicationRequest = {
-  reason: string;
+  reason?: string;
 };
 
 export type CancelApplicationResponse = {
