@@ -15,6 +15,7 @@ import {
   Alert,
   TouchableOpacity,
   Pressable,
+  Keyboard,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
@@ -175,6 +176,8 @@ export default function PostDetailScreen() {
       setIsSubmittingComment(true);
       await createPostComment(postId, {content: comment.trim()});
       setComment('');
+      // 키보드 내리기
+      Keyboard.dismiss();
       // 댓글 리스트 리프레시
       await fetchComments();
       // 게시물 상세 정보도 리프레시하여 댓글 수 업데이트
