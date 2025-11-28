@@ -242,3 +242,14 @@ export async function updateCommunityPost(
 ): Promise<void> {
   await apiClient.put(`/community/posts/${postId}`, data);
 }
+
+interface PostKeywordsResponse {
+  keywords: string[];
+}
+
+export async function getPostKeywords(): Promise<string[]> {
+  const response = await apiClient.get<PostKeywordsResponse>(
+    '/community/posts/keywords',
+  );
+  return response.data?.keywords ?? [];
+}

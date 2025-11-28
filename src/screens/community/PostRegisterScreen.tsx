@@ -24,6 +24,7 @@ import PlusIcon from '../../assets/icons/plus.svg';
 import {
   uploadCommunityImage,
   createCommunityPost,
+  getPostKeywords,
 } from '../../api/communityApi';
 
 interface PhotoNode {
@@ -40,19 +41,33 @@ export default function PostRegisterScreen() {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [selectedKeyword, setSelectedKeyword] = useState<KeywordType>(null);
+  const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [photos, setPhotos] = useState<PhotoNode[]>([]);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [keywords, setKeywords] = useState<string[]>([]);
 
   const titleInputRef = useRef<TextInput>(null);
   const contentInputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const keywords: string[] = ['후기', '수선', '질문', '기타'];
+  useEffect(() => {
+    const fetchKeywords = async () => {
+      try {
+        const keywordsList = await getPostKeywords();
+        setKeywords(keywordsList);
+      } catch (error) {
+        console.error('Failed to fetch keywords:', error);
+        // 기본값으로 폴백
+        setKeywords(['후기', '수선', '질문', '기타']);
+      }
+    };
+
+    fetchKeywords();
+  }, []);
 
   const requestPermissions = async (): Promise<boolean> => {
     if (Platform.OS === 'android') {
@@ -151,7 +166,7 @@ export default function PostRegisterScreen() {
     if (selectedKeyword === keyword) {
       setSelectedKeyword(null);
     } else {
-      setSelectedKeyword(keyword as KeywordType);
+      setSelectedKeyword(keyword);
     }
   };
 
