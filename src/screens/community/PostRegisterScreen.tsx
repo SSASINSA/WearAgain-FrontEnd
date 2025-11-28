@@ -13,6 +13,7 @@ import {
   FlatList,
   PermissionsAndroid,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -20,8 +21,10 @@ import {CameraRoll} from '@react-native-camera-roll/camera-roll';
 import {Text} from '../../components/common/Text';
 import DetailHeader from '../../components/common/DetailHeader';
 import PlusIcon from '../../assets/icons/plus.svg';
-
-type KeywordType = '후기' | '수선' | '질문' | '기타' | null;
+import {
+  uploadCommunityImage,
+  createCommunityPost,
+} from '../../api/communityApi';
 
 interface PhotoNode {
   image: {
@@ -43,12 +46,13 @@ export default function PostRegisterScreen() {
   const [photos, setPhotos] = useState<PhotoNode[]>([]);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [endCursor, setEndCursor] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const titleInputRef = useRef<TextInput>(null);
   const contentInputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const keywords: KeywordType[] = ['후기', '수선', '질문', '기타'];
+  const keywords: string[] = ['수선', '질문', '기타'];
 
   const requestPermissions = async (): Promise<boolean> => {
     if (Platform.OS === 'android') {
@@ -151,10 +155,54 @@ export default function PostRegisterScreen() {
     }
   };
 
-  const handleSubmit = () => {
-    // TODO: 게시글 등록 API 호출
-    Alert.alert('성공', '게시글이 등록되었습니다.');
-    navigation.goBack();
+  const handleSubmit = async () => {
+    if (!title.trim() || !selectedKeyword) {
+      Alert.alert('입력 오류', '제목과 키워드를 입력해주세요.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      let imageUrl: string | null = null;
+
+      // 이미지가 있으면 먼저 업로드
+      if (selectedImage) {
+        try {
+          const uploadResponse = await uploadCommunityImage(selectedImage);
+          imageUrl = uploadResponse.imageUrl;
+        } catch (error) {
+          console.error('Image upload error:', error);
+          Alert.alert('오류', '이미지 업로드에 실패했습니다.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // 게시물 등록
+      const postData = {
+        title: title.trim(),
+        content: content.trim(),
+        keyword: selectedKeyword,
+        imageUrls: imageUrl ? [imageUrl] : [],
+      };
+
+      await createCommunityPost(postData);
+
+      Alert.alert('성공', '게시글이 등록되었습니다.', [
+        {
+          text: '확인',
+          onPress: () => {
+            navigation.goBack();
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error('Post creation error:', error);
+      Alert.alert('오류', '게시글 등록에 실패했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const isSubmitEnabled = title.length >= 0 && selectedKeyword !== null;
@@ -279,11 +327,15 @@ export default function PostRegisterScreen() {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            !isSubmitEnabled && styles.submitButtonDisabled,
+            (!isSubmitEnabled || isSubmitting) && styles.submitButtonDisabled,
           ]}
           onPress={handleSubmit}
-          disabled={!isSubmitEnabled}>
-          <Text style={styles.submitButtonText}>등록</Text>
+          disabled={!isSubmitEnabled || isSubmitting}>
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.submitButtonText}>등록</Text>
+          )}
         </TouchableOpacity>
       </KeyboardAvoidingView>
 
