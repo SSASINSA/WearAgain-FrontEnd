@@ -2,6 +2,7 @@ import React from 'react';
 import {RouteProp, useRoute} from '@react-navigation/native';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -20,7 +21,9 @@ import LocationIcon from '../../assets/icons/eventLocationIcon.svg';
 import {
   useApplicationDetail,
   useApplicationQr,
+  useCancelApplication,
 } from '../../hooks/useApplications';
+import EventCancelModal from '../event/EventCancelModal';
 
 type DetailRouteProp = RouteProp<
   ApplicationsStackParamList,
@@ -32,31 +35,80 @@ export default function ApplicationDetailScreen() {
     params: {applicationId, initialData},
   } = useRoute<DetailRouteProp>();
 
-  const {data, isLoading, isError, refetch} = useApplicationDetail(
-    applicationId,
-    initialData,
-  );
+  const {data, isLoading, isError, refetch, isFetching} =
+    useApplicationDetail(applicationId, initialData);
+
+  const {
+    eventStatusCode,
+    applicationStatusCode,
+    statusLabel,
+    isClosed,
+    isApplied,
+  } = resolveStatuses(data, initialData);
 
   const {
     qrToken,
     secondsLeft,
     isIssuing,
     isExpired,
+    hasError: qrError,
+    errorMessage: qrErrorMessage,
+    errorState,
+    isDisabled: isQrDisabled,
     reissue,
-  } = useApplicationQr(applicationId);
+  } = useApplicationQr(applicationId, {enabled: !isClosed});
 
   const [showModal, setShowModal] = React.useState(false);
+  const [showCancelModal, setShowCancelModal] = React.useState(false);
+
+  const {mutate: cancelApplication, isPending: isCancelling} =
+    useCancelApplication();
 
   const timerLabel =
-    qrToken && secondsLeft >= 0 ? formatSeconds(secondsLeft) : '--:--';
+    qrToken && secondsLeft >= 0 && !qrError
+      ? formatSeconds(secondsLeft)
+      : '--:--';
+
+  const isCancelable = React.useMemo(() => {
+    const isEventOpen = eventStatusCode === 'OPEN' || eventStatusCode === 'RUNNING';
+    return isEventOpen && isApplied;
+  }, [eventStatusCode, isApplied]);
 
   const handleOpenModal = () => {
-    if (qrToken) {
+    if (qrToken && !qrError) {
       setShowModal(true);
     }
   };
 
   const handleCloseModal = () => setShowModal(false);
+
+  const handleCancelApplication = (reason: string) => {
+    cancelApplication(
+      {
+        applicationId,
+        eventId: data.eventId,
+        body: {reason},
+      },
+      {
+        onSuccess: () => {
+          setShowCancelModal(false);
+          Alert.alert('취소 완료', '신청이 취소되었습니다.');
+        },
+        onError: () => {
+          Alert.alert(
+            '취소 실패',
+            '신청 취소 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          );
+        },
+      },
+    );
+  };
+
+  const showQrError = (qrError && !isIssuing) || isClosed || isQrDisabled;
+  const qrVariant = getQrErrorVariant(
+    isClosed ? 'ended' : errorState,
+    qrErrorMessage,
+  );
 
   if (isLoading && !data) {
     return (
@@ -84,6 +136,14 @@ export default function ApplicationDetailScreen() {
   return (
     <View style={styles.safeArea}>
       <DetailHeader title="신청" useTopInset />
+      {isFetching && data ? (
+        <View style={styles.inlineLoader}>
+          <ActivityIndicator size="small" color="#06B0B7" />
+          <Text variant="bodyS" color="#06B0B7">
+            새로고침 중
+          </Text>
+        </View>
+      ) : null}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
@@ -134,39 +194,92 @@ export default function ApplicationDetailScreen() {
           </LinearGradient>
 
           <View style={styles.body}>
-            <TouchableOpacity
-              style={styles.qrBlock}
-              activeOpacity={0.8}
-              onPress={handleOpenModal}
-              disabled={!qrToken}>
-              <View style={styles.qrWrapper}>
-                {qrToken ? (
-                  <QRCode value={qrToken} size={150} />
-                ) : (
-                  <ActivityIndicator size="small" color="#6B7280" />
+            {showQrError ? (
+              <View
+                style={[
+                  styles.qrBlock,
+                  qrVariant.containerStyle,
+                ]}>
+                <View
+                  style={[
+                    styles.qrBadge,
+                    qrVariant.badgeStyle,
+                  ]}>
+                  <Text variant="labelS" color={qrVariant.badgeTextColor}>
+                    {qrVariant.badgeText}
+                  </Text>
+                </View>
+                <Text
+                  variant="headlineS"
+                  color="#111827"
+                  style={styles.qrErrorTitle}>
+                  {qrVariant.title}
+                </Text>
+                <Text
+                  variant="bodyM"
+                  color="#6B7280"
+                  style={styles.qrErrorMessage}>
+                  {qrVariant.message}
+                </Text>
+                {qrVariant.showRetry && (
+                  <TouchableOpacity
+                    style={styles.qrErrorRetry}
+                    onPress={reissue}
+                    disabled={isIssuing}>
+                    <Text variant="labelM" color="#FFFFFF">
+                      {isIssuing ? '다시 시도 중...' : '다시 시도하기'}
+                    </Text>
+                  </TouchableOpacity>
                 )}
               </View>
-              <Text variant="labelL" color="#111827">
-                {timerLabel}
-              </Text>
-              <Text variant="bodyS" color="#6B7280" style={styles.qrHint}>
-                QR을 누르면 확대해서 볼 수 있어요
-              </Text>
+            ) : (
               <TouchableOpacity
-                style={[
-                  styles.qrRefreshButton,
-                  isExpired && styles.qrRefreshButtonDanger,
-                ]}
-                onPress={reissue}
-                disabled={isIssuing}>
-                <Text variant="labelM" color="#FFFFFF">
-                  {isIssuing ? '발급 중...' : 'QR 새로고침'}
+                style={styles.qrBlock}
+                activeOpacity={0.8}
+                onPress={handleOpenModal}
+                disabled={!qrToken}>
+                <View style={styles.qrWrapper}>
+                  {qrToken ? (
+                    <QRCode value={qrToken} size={150} />
+                  ) : (
+                    <ActivityIndicator size="small" color="#6B7280" />
+                  )}
+                </View>
+                <Text variant="labelL" color="#111827">
+                  {timerLabel}
                 </Text>
+                <Text variant="bodyS" color="#6B7280" style={styles.qrHint}>
+                  QR을 누르면 확대해서 볼 수 있어요
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.qrRefreshButton,
+                    isExpired && styles.qrRefreshButtonDanger,
+                  ]}
+                  onPress={reissue}
+                  disabled={isIssuing}>
+                  <Text variant="labelM" color="#FFFFFF">
+                    {isIssuing ? '발급 중...' : 'QR 새로고침'}
+                  </Text>
+                </TouchableOpacity>
               </TouchableOpacity>
-            </TouchableOpacity>
+            )}
 
             <Section title="이용 방법" items={data.usageGuide} />
             <Section title="주의사항" items={data.precautions} />
+
+            {isCancelable && (
+              <View style={styles.cancelLinkWrapper}>
+                <TouchableOpacity
+                  hitSlop={{top: 12, bottom: 12, left: 8, right: 8}}
+                  onPress={() => setShowCancelModal(true)}
+                  disabled={isCancelling}>
+                  <Text variant="bodyS" color="#6B7280" style={styles.cancelLink}>
+                    방문이 어려우신가요? 신청을 취소할 수 있어요
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -189,6 +302,13 @@ export default function ApplicationDetailScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      <EventCancelModal
+        isVisible={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={handleCancelApplication}
+        isPending={isCancelling}
+      />
     </View>
   );
 }
@@ -243,6 +363,82 @@ function formatSeconds(value: number) {
   return `${minutes}:${seconds}`;
 }
 
+type QrErrorState = 'completed' | 'ended' | 'canceled' | 'generic' | null;
+
+function getQrErrorVariant(state: QrErrorState, message?: string | null) {
+  const variants = {
+    completed: {
+      containerStyle: styles.qrBlockSuccess,
+      badgeStyle: styles.qrBadgeSuccess,
+      badgeText: '체크인 완료',
+      badgeTextColor: '#16A34A',
+      title: '이미 체크인이 완료된 신청이에요',
+      message:
+        message ?? '현장 직원에게 문의해 주세요. QR 발급 없이 입장이 완료되었어요.',
+      showRetry: false,
+    },
+    ended: {
+      containerStyle: styles.qrBlockWarning,
+      badgeStyle: styles.qrBadgeWarning,
+      badgeText: '행사 종료',
+      badgeTextColor: '#B45309',
+      title: '행사가 종료되어 QR을 발급할 수 없어요',
+      message: message ?? '다음 행사 일정을 확인해 주세요.',
+      showRetry: false,
+    },
+    canceled: {
+      containerStyle: styles.qrBlockError,
+      badgeStyle: styles.qrBadgeDanger,
+      badgeText: '신청 취소',
+      badgeTextColor: '#DC2626',
+      title: '신청이 취소되어 QR을 발급할 수 없어요',
+      message: message ?? '다시 신청 후 QR을 발급해 주세요.',
+      showRetry: false,
+    },
+    generic: {
+      containerStyle: styles.qrBlockError,
+      badgeStyle: styles.qrBadgeDanger,
+      badgeText: '발급 실패',
+      badgeTextColor: '#EF4444',
+      title: 'QR 발급이 지연되고 있어요',
+      message:
+        message ?? '네트워크 상태를 확인한 뒤 다시 시도해주세요.',
+      showRetry: true,
+    },
+  } as const;
+
+  return variants[state ?? 'generic'];
+}
+
+function resolveStatuses(
+  detail?: ReturnType<typeof useApplicationDetail>['data'],
+  initial?: DetailRouteProp['params']['initialData'],
+) {
+  const eventStatusCode = (detail?.eventStatusCode ?? initial?.eventStatusCode)?.toUpperCase();
+  const applicationStatusCode = (
+    detail?.applicationStatusCode ?? initial?.applicationStatusCode
+  )?.toUpperCase();
+  const statusLabel = detail?.status ?? initial?.status;
+
+  const isClosed =
+    eventStatusCode === 'CLOSED' ||
+    eventStatusCode === 'FINISHED' ||
+    eventStatusCode === 'ENDED' ||
+    statusLabel === '종료';
+
+  const isApplied =
+    applicationStatusCode === 'APPLIED' ||
+    (!applicationStatusCode && statusLabel === '진행중');
+
+  return {
+    eventStatusCode,
+    applicationStatusCode,
+    statusLabel,
+    isClosed,
+    isApplied,
+  };
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -251,6 +447,13 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+  },
+  inlineLoader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingTop: 8,
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -338,6 +541,64 @@ const styles = StyleSheet.create({
   qrRefreshButtonDanger: {
     backgroundColor: '#DC2626',
   },
+  qrBlockError: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    borderRadius: 16,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+  },
+  qrBlockSuccess: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    borderRadius: 16,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+  },
+  qrBlockWarning: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 16,
+    backgroundColor: '#FFFBEB',
+    alignItems: 'center',
+  },
+  qrBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 8,
+  },
+  qrBadgeDanger: {
+    backgroundColor: '#FFE4E6',
+  },
+  qrBadgeSuccess: {
+    backgroundColor: '#DCFCE7',
+  },
+  qrBadgeWarning: {
+    backgroundColor: '#FEF3C7',
+  },
+  qrErrorTitle: {
+    marginTop: 4,
+    fontWeight: '700',
+  },
+  qrErrorMessage: {
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 18,
+  },
+  qrErrorRetry: {
+    marginTop: 14,
+    backgroundColor: '#EF4444',
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
   section: {
     marginBottom: 24,
   },
@@ -399,5 +660,11 @@ const styles = StyleSheet.create({
   modalHint: {
     marginTop: 12,
   },
+  cancelLinkWrapper: {
+    marginTop: 4,
+    alignItems: 'center',
+  },
+  cancelLink: {
+    textDecorationLine: 'underline',
+  },
 });
-

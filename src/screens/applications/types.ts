@@ -6,6 +6,8 @@ export type ApplicationSummary = {
   title: string;
   description: string;
   status: ApplicationStatusLabel;
+  eventStatusCode?: string;
+  applicationStatusCode?: string;
   startDate: string;
   endDate: string;
   location: string;
