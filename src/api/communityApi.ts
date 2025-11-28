@@ -207,3 +207,38 @@ export async function deletePostComment(
 ): Promise<void> {
   await apiClient.delete(`/community/posts/${postId}/comments/${commentId}`);
 }
+
+export async function deleteCommunityPost(postId: string): Promise<void> {
+  await apiClient.delete(`/community/posts/${postId}`);
+}
+
+export interface ReportPostRequest {
+  postId: number;
+  reason: string;
+}
+
+export async function reportCommunityPost(
+  postId: string,
+  reason: string,
+): Promise<void> {
+  const requestBody: ReportPostRequest = {
+    postId: parseInt(postId, 10),
+    reason,
+  };
+
+  await apiClient.post(`/community/reports`, requestBody);
+}
+
+export interface UpdatePostRequest {
+  title: string;
+  content: string;
+  keyword: string;
+  imageUrls: string[];
+}
+
+export async function updateCommunityPost(
+  postId: string,
+  data: UpdatePostRequest,
+): Promise<void> {
+  await apiClient.put(`/community/posts/${postId}`, data);
+}
