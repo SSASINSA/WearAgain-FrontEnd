@@ -141,6 +141,73 @@ export async function toggleCommunityPostLike(
   return response.data;
 }
 
+export interface CommentAuthor {
+  id: number;
+  name: string;
+}
+
+export interface Comment {
+  id: number;
+  author: CommentAuthor;
+  createdAt: string;
+  content: string;
+  isMine: boolean;
+}
+
+export interface CommentsResponse {
+  limit: number;
+  nextCursor: string | null;
+  hasNext: boolean;
+  comments: Comment[];
+}
+
+export interface GetCommentsParams {
+  cursor?: number | null;
+  limit?: number;
+}
+
+export async function getPostComments(
+  postId: string,
+  params: GetCommentsParams = {},
+): Promise<CommentsResponse> {
+  const {cursor, limit} = params;
+
+  const queryParams: Record<string, string | number> = {};
+
+  if (limit !== undefined && limit !== null) {
+    queryParams.limit = limit;
+  }
+
+  if (cursor !== undefined && cursor !== null) {
+    queryParams.cursor = cursor;
+  }
+
+  const response = await apiClient.get<CommentsResponse>(
+    `/community/posts/${postId}/comments`,
+    {params: queryParams},
+  );
+
+  return response.data;
+}
+
+export interface CreateCommentRequest {
+  content: string;
+}
+
+export async function createPostComment(
+  postId: string,
+  data: CreateCommentRequest,
+): Promise<void> {
+  await apiClient.post(`/community/posts/${postId}/comments`, data);
+}
+
+export async function deletePostComment(
+  postId: string,
+  commentId: number,
+): Promise<void> {
+  await apiClient.delete(`/community/posts/${postId}/comments/${commentId}`);
+}
+
 export async function deleteCommunityPost(postId: string): Promise<void> {
   await apiClient.delete(`/community/posts/${postId}`);
 }

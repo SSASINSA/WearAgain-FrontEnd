@@ -15,21 +15,24 @@ import {
   Alert,
   TouchableOpacity,
   Pressable,
+  Keyboard,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
 import DetailHeader from '../../components/common/DetailHeader';
 import {Text} from '../../components/common/Text';
-import PostDetailCommentComponent, {
-  Comment,
-} from './PostDetailCommentComponent';
+import PostDetailCommentComponent from './PostDetailCommentComponent';
 import PostDetailInputComponent from './PostDetailInputComponent';
 import {
   getCommunityPostDetail,
   CommunityPostDetail,
   toggleCommunityPostLike,
+  getPostComments,
+  createPostComment,
+  deletePostComment,
   deleteCommunityPost,
   reportCommunityPost,
+  Comment,
 } from '../../api/communityApi';
 import {formatRelativeTime} from '../../utils/formatDate';
 import MoreHorizIcon from '../../assets/icons/more_horiz.svg';
@@ -67,32 +70,23 @@ export default function PostDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isLiking, setIsLiking] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
 
-  // 샘플 댓글 데이터 (댓글 API가 구현되면 교체 필요)
-  const comments: Comment[] = [
-    {
-      id: '1',
-      author: '최영수',
-      timeAgo: '30분 전',
-      content:
-        '인테리어 진짜 감각적이네요 👍 다음에 데이트 코스로 좋을 것 같아요',
-    },
-    {
-      id: '2',
-      author: '박준호',
-      timeAgo: '45분 전',
-      content:
-        '인테리어 진짜 감각적이네요 👍 다음에 데이트 코스로 좋을 것 같아요',
-    },
-    {
-      id: '3',
-      author: '이수진',
-      timeAgo: '1시간 전',
-      content:
-        '인테리어 진짜 감각적이네요 👍 다음에 데이트 코스로 좋을 것 같아요',
-    },
-  ];
+  const fetchComments = useCallback(async () => {
+    try {
+      setIsLoadingComments(true);
+      const response = await getPostComments(postId, {limit: 10});
+      setComments(response.comments);
+    } catch (err: any) {
+      console.error('Failed to fetch comments:', err);
+      // 댓글 로드 실패는 조용히 처리 (게시물은 표시)
+    } finally {
+      setIsLoadingComments(false);
+    }
+  }, [postId]);
 
   const fetchPostDetail = useCallback(
     async (showErrorAlert: boolean = true) => {
@@ -101,13 +95,16 @@ export default function PostDetailScreen() {
         setError(null);
         const data = await getCommunityPostDetail(postId);
         setPostData(data);
+
+        // 게시물 로드 후 댓글도 함께 로드
+        await fetchComments();
       } catch (err: any) {
-        console.error('Failed to fetch post detail:', err);
         const errorMessage =
           err?.response?.data?.message ||
           err?.message ||
           '게시물을 불러오는데 실패했습니다.';
-        // 에러 알림 표시 여부를 파라미터로 제어
+        setError(new Error(errorMessage));
+        console.error('Failed to fetch post detail:', err);
         if (showErrorAlert) {
           Alert.alert('오류', errorMessage, [
             {
@@ -120,13 +117,13 @@ export default function PostDetailScreen() {
         setIsLoading(false);
       }
     },
-    [postId, navigation],
+    [postId, navigation, fetchComments],
   );
 
   // 초기 로드
   useEffect(() => {
     fetchPostDetail(true);
-  }, [postId, fetchPostDetail]);
+  }, [fetchPostDetail]);
 
   // 화면이 포커스될 때마다 데이터 리프레시 (에러 알림 없이)
   useFocusEffect(
@@ -170,10 +167,54 @@ export default function PostDetailScreen() {
     }
   };
 
-  const handleSendComment = () => {
-    console.log('댓글 전송:', comment);
-    setComment('');
-    // TODO: 댓글 API 호출
+  const handleSendComment = async () => {
+    if (!comment.trim() || isSubmittingComment) {
+      return;
+    }
+
+    try {
+      setIsSubmittingComment(true);
+      await createPostComment(postId, {content: comment.trim()});
+      setComment('');
+      // 키보드 내리기
+      Keyboard.dismiss();
+      // 댓글 리스트 리프레시
+      await fetchComments();
+      // 게시물 상세 정보도 리프레시하여 댓글 수 업데이트
+      if (postData) {
+        const updatedPostData = await getCommunityPostDetail(postId);
+        setPostData(updatedPostData);
+      }
+    } catch (error: any) {
+      console.error('Failed to create comment:', error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        '댓글 등록에 실패했습니다.';
+      Alert.alert('오류', errorMessage);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    try {
+      await deletePostComment(postId, commentId);
+      // 댓글 리스트 리프레시
+      await fetchComments();
+      // 게시물 상세 정보도 리프레시하여 댓글 수 업데이트
+      if (postData) {
+        const updatedPostData = await getCommunityPostDetail(postId);
+        setPostData(updatedPostData);
+      }
+    } catch (error: any) {
+      console.error('Failed to delete comment:', error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        '댓글 삭제에 실패했습니다.';
+      Alert.alert('오류', errorMessage);
+    }
   };
 
   const handleMenuPress = () => {
@@ -313,13 +354,17 @@ export default function PostDetailScreen() {
 
         {/* 제목 영역 */}
         <View style={styles.titleSection}>
-          <Text variant="headlineL" color="#111827" style={styles.title}>
+          <Text
+            variant="displayM"
+            weight="semiBold"
+            color="#111827"
+            style={styles.title}>
             {postData.title}
           </Text>
         </View>
 
         {/* 구분자 */}
-        <View style={styles.divider} />
+        {/* <View style={styles.divider} /> */}
 
         {/* 이미지 영역 */}
         {postData.imageUrl && (
@@ -342,6 +387,7 @@ export default function PostDetailScreen() {
         <PostDetailCommentComponent
           commentCount={postData.commentCount}
           comments={comments}
+          onDeleteComment={handleDeleteComment}
         />
       </ScrollView>
 
