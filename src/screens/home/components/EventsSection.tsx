@@ -11,24 +11,14 @@ import {useNavigation} from '@react-navigation/native';
 import {Text as CustomText} from '../../../components/common/Text';
 import {useEventsList, EventSummary} from '../../../hooks/useEvents';
 
-const eventImages = [
-  require('../../../assets/images/events/event1.jpg'),
-  require('../../../assets/images/events/event2.jpg'),
-  require('../../../assets/images/events/event3.jpg'),
-  require('../../../assets/images/events/event4.jpeg'),
-];
-
 export const EventsSection: React.FC = () => {
   const navigation = useNavigation<any>();
-  const {data, isLoading} = useEventsList();
+  const {data, isLoading} = useEventsList({status: 'OPEN'});
 
   const events =
     data?.pages.flatMap((page: {events: EventSummary[]}) => page.events) ?? [];
 
-  const eventsWithImages = events.slice(0, 4).map((event, index) => ({
-    ...event,
-    imageSource: eventImages[index % eventImages.length],
-  }));
+  const eventsToShow = events.slice(0, 4);
 
   const handleEventPress = (event: EventSummary) => {
     navigation.navigate('EventDetail', {
@@ -48,20 +38,20 @@ export const EventsSection: React.FC = () => {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color="#6B7280" />
         </View>
-      ) : eventsWithImages.length === 0 ? null : (
+      ) : eventsToShow.length === 0 ? null : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.eventsScrollView}
           contentContainerStyle={styles.eventsContainer}>
-          {eventsWithImages.map((event) => (
+          {eventsToShow.map((event) => (
             <TouchableOpacity
               key={event.id}
               style={styles.eventCard}
               onPress={() => handleEventPress(event)}>
               <View style={styles.eventImage}>
-                {event.imageSource && (
-                  <Image source={event.imageSource} style={styles.image} />
+                {event.thumbnailUrl && (
+                  <Image source={{uri: event.thumbnailUrl}} style={styles.image} />
                 )}
               </View>
               <View style={styles.eventContent}>
