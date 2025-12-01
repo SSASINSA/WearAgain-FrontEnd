@@ -1,5 +1,12 @@
 import React, {useState} from 'react';
-import {View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  StatusBar,
+} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {PostItemComponent, PostItemProps} from '../community/PostItemComponent';
@@ -107,45 +114,49 @@ export default function MyPostsScreen() {
   const postItems = posts.map(mapPostToItemProps);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <DetailHeader />
-      {isLoading && posts.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#06b0b7" />
-        </View>
-      ) : (
-        <FlatList
-          data={postItems}
-          renderItem={renderPostItem}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={0.5}
-          refreshing={isRefreshing}
-          onRefresh={refresh}
-          ListFooterComponent={
-            isLoading && posts.length > 0 ? (
-              <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color="#06b0b7" />
-              </View>
-            ) : null
-          }
-        />
-      )}
-    </SafeAreaView>
+    <>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <DetailHeader />
+        {isLoading && posts.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#06b0b7" />
+          </View>
+        ) : (
+          <FlatList
+            data={postItems}
+            renderItem={renderPostItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.5}
+            refreshing={isRefreshing}
+            onRefresh={refresh}
+            ListFooterComponent={
+              isLoading && posts.length > 0 ? (
+                <View style={styles.footerLoader}>
+                  <ActivityIndicator size="small" color="#06b0b7" />
+                </View>
+              ) : null
+            }
+          />
+        )}
+      </SafeAreaView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F2',
+    backgroundColor: '#FFFFFF',
   },
   listContainer: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    backgroundColor: '#F2F2F2',
   },
   separator: {
     height: 16,
@@ -160,4 +171,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
-
