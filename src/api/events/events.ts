@@ -1,7 +1,7 @@
 import {apiClient} from '../client';
 
 export type EventListParams = {
-  status?: string;
+  status?: string | string[];
   cursor?: string;
   size?: number;
 };

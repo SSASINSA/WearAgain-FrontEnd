@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -13,15 +13,24 @@ import {EventCard} from './EventCard';
 import {useEventsList, EventSummary} from '../../hooks/useEvents';
 import {Text} from '../../components/common/Text';
 
-const eventImages = [
-  require('../../assets/images/events/event1.jpg'),
-  require('../../assets/images/events/event2.jpg'),
-  require('../../assets/images/events/event3.jpg'),
-  require('../../assets/images/events/event4.jpeg'),
+type FilterType = 'all' | 'APPROVAL' | 'OPEN' | 'CLOSED';
+
+const FILTER_OPTIONS: Array<{value: FilterType; label: string}> = [
+  {value: 'all', label: '전체'},
+  {value: 'APPROVAL', label: '예정'},
+  {value: 'OPEN', label: '모집중'},
+  {value: 'CLOSED', label: '마감'},
 ];
 
 export default function EventScreen() {
   const navigation = useNavigation<any>();
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
+
+  const filterParams =
+    selectedFilter === 'all'
+      ? undefined
+      : {status: selectedFilter};
+
   const {
     data,
     isLoading,
@@ -31,15 +40,10 @@ export default function EventScreen() {
     hasNextPage,
     isFetchingNextPage,
     isRefetching,
-  } = useEventsList();
+  } = useEventsList(filterParams);
 
   const events =
     data?.pages.flatMap((page: {events: EventSummary[]}) => page.events) ?? [];
-
-  const eventsWithImages = events.map((event, index) => ({
-    ...event,
-    imageSource: eventImages[index % eventImages.length],
-  }));
 
   const handleEventPress = (event: EventSummary) => {
     navigation.navigate('EventDetail', {
@@ -49,8 +53,7 @@ export default function EventScreen() {
 
   const renderEventItem = ({
     item,
-    index,
-  }: ListRenderItemInfo<EventSummary & {imageSource: any}>) => (
+  }: ListRenderItemInfo<EventSummary>) => (
     <EventCard
       title={item.title}
       description={item.description}
@@ -59,7 +62,6 @@ export default function EventScreen() {
       location={item.location}
       status={item.status}
       imageUrl={item.thumbnailUrl}
-      imageSource={item.imageSource}
       onPress={() => handleEventPress(item)}
     />
   );
@@ -96,8 +98,34 @@ export default function EventScreen() {
     </View>
   );
 
+  const renderFilterButton = (option: {value: FilterType; label: string}) => {
+    const isSelected = selectedFilter === option.value;
+    return (
+      <TouchableOpacity
+        key={option.value}
+        style={[
+          styles.filterButton,
+          isSelected && styles.filterButtonSelected,
+        ]}
+        onPress={() => setSelectedFilter(option.value)}
+        activeOpacity={0.7}>
+        <Text
+          variant="labelM"
+          color={isSelected ? '#FFFFFF' : '#6B7280'}
+          style={styles.filterButtonText}>
+          {option.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={styles.container}>
+      <View style={styles.filterContainer}>
+        <View style={styles.filterContent}>
+          {FILTER_OPTIONS.map(renderFilterButton)}
+        </View>
+      </View>
       {isLoading && events.length === 0 ? (
         <View style={styles.stateContainer}>
           <ActivityIndicator size="large" color="#6B7280" />
@@ -105,10 +133,10 @@ export default function EventScreen() {
       ) : isError && events.length === 0 ? (
         renderStateView('이벤트를 불러오지 못했습니다.', true)
       ) : events.length === 0 ? (
-        renderStateView('등록된 이벤트가 없습니다.')
+        renderStateView('등록된 이벤트가 없습니다.', true)
       ) : (
         <FlatList
-          data={eventsWithImages}
+          data={events}
           renderItem={renderEventItem}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContainer}
@@ -130,6 +158,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F2F2F2',
+  },
+  filterContainer: {
+    backgroundColor: '#F2F2F2',
+    paddingVertical: 12,
+  },
+  filterContent: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    marginRight: 8,
+  },
+  filterButtonSelected: {
+    backgroundColor: '#06B0B7',
+  },
+  filterButtonText: {
+    fontWeight: '600',
   },
   listContainer: {
     paddingHorizontal: 16,
