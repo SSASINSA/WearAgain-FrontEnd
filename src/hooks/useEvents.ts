@@ -10,7 +10,7 @@ import {
   CancelEventApplicationRequest,
 } from '../api/events/events';
 
-export type EventStatusLabel = '예정' | '진행중' | '종료';
+export type EventStatusLabel = '예정' | '모집중' | '마감';
 
 export type EventSummary = {
   id: string;
@@ -70,19 +70,14 @@ export type EventDetail = {
 
 function mapStatus(status: string): EventStatusLabel {
   switch (status) {
-    case 'UPCOMING':
-    case 'SCHEDULED':
-    case 'OPENING':
+    case 'APPROVAL':
       return '예정';
     case 'OPEN':
-    case 'RUNNING':
-      return '진행중';
+      return '모집중';
     case 'CLOSED':
-    case 'FINISHED':
-    case 'ENDED':
-      return '종료';
+      return '마감';
     default:
-      return '진행중';
+      return '예정';
   }
 }
 
@@ -167,12 +162,18 @@ function toDetail(payload: EventDetailResponse): EventDetail {
   };
 }
 
-export function useEventsList(params?: {status?: string}) {
+export function useEventsList(params?: {status?: string | string[]}) {
+  const defaultStatus = ['APPROVAL', 'OPEN', 'CLOSED'];
+  const status = params?.status 
+    ? (Array.isArray(params.status) ? params.status : [params.status])
+    : defaultStatus;
+
   return useInfiniteQuery({
     queryKey: ['events', 'list', params],
     queryFn: ({pageParam}) =>
       eventsApi.getEvents({
         ...params,
+        status,
         cursor: typeof pageParam === 'string' ? pageParam : undefined,
       }),
     initialPageParam: undefined as string | undefined,

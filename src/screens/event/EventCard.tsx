@@ -15,7 +15,7 @@ interface EventCardProps {
   startDate: string;
   endDate: string;
   location: string;
-  status: '예정' | '진행중' | '종료';
+  status: '예정' | '모집중' | '마감';
   imageUrl?: string;
   imageSource?: any;
   onPress?: () => void;
@@ -35,10 +35,10 @@ export function EventCard({
   const getStatusColor = (status: string) => {
     switch (status) {
       case '예정':
-        return '#06b0b7';
-      case '진행중':
+        return '#9333EA';
+      case '모집중':
         return '#FF4242';
-      case '종료':
+      case '마감':
         return '#6b7280';
       default:
         return '#06b0b7';
