@@ -4,7 +4,7 @@ import {
   useRoute,
   useFocusEffect,
 } from '@react-navigation/native';
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useCallback, useRef} from 'react';
 import {
   Image,
   ImageSourcePropType,
@@ -16,6 +16,8 @@ import {
   TouchableOpacity,
   Pressable,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
@@ -74,6 +76,7 @@ export default function PostDetailScreen() {
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const hasLoadedRef = useRef(false);
 
   const fetchComments = useCallback(async () => {
     try {
@@ -120,15 +123,14 @@ export default function PostDetailScreen() {
     [postId, navigation, fetchComments],
   );
 
-  // 초기 로드
-  useEffect(() => {
-    fetchPostDetail(true);
-  }, [fetchPostDetail]);
-
-  // 화면이 포커스될 때마다 데이터 리프레시 (에러 알림 없이)
+  // 화면이 포커스될 때마다 데이터 로드 / 리프레시
+  // 첫 진입 시에만 에러 알림을 표시하고, 이후에는 알림 없이 리프레시
   useFocusEffect(
     useCallback(() => {
-      fetchPostDetail(false);
+      const showErrorAlert = !hasLoadedRef.current;
+      fetchPostDetail(showErrorAlert).finally(() => {
+        hasLoadedRef.current = true;
+      });
     }, [fetchPostDetail]),
   );
 
@@ -294,10 +296,15 @@ export default function PostDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <DetailHeader />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#06b0b7" />
-        </View>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}>
+          <DetailHeader />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#06b0b7" />
+          </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
@@ -305,101 +312,108 @@ export default function PostDetailScreen() {
   if (error || !postData) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <DetailHeader />
-        <View style={styles.errorContainer}>
-          <Text variant="bodyM" color="#6B7280">
-            게시물을 불러올 수 없습니다.
-          </Text>
-        </View>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}>
+          <DetailHeader />
+          <View style={styles.errorContainer}>
+            <Text variant="bodyM" color="#6B7280">
+              게시물을 불러올 수 없습니다.
+            </Text>
+          </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* 헤더 영역 */}
-      <DetailHeader
-        rightElement={
-          <TouchableOpacity
-            style={styles.menuButton}
-            onPress={handleMenuPress}
-            accessibilityRole="button"
-            accessibilityLabel="더보기 메뉴">
-            <MoreHorizIcon width={24} height={24} color="#111827" />
-          </TouchableOpacity>
-        }
-      />
-
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}>
-        {/* 작성자 정보 영역 */}
-        <View style={styles.authorSection}>
-          <View style={styles.authorInfo}>
-            <View style={[styles.categoryTag, {backgroundColor: '#06b0b7'}]}>
-              <Text variant="bodyS" color="#FFFFFF" align="center">
-                {postData.keyword}
-              </Text>
-            </View>
-            <View style={styles.authorDetails}>
-              <Text variant="bodyM" color="#111827">
-                {postData.author.name}
-              </Text>
-              <Text variant="bodyS" color="#6B7280" style={styles.timeAgo}>
-                {formatRelativeTime(postData.createdAt)}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* 제목 영역 */}
-        <View style={styles.titleSection}>
-          <Text
-            variant="displayM"
-            weight="semiBold"
-            color="#111827"
-            style={styles.title}>
-            {postData.title}
-          </Text>
-        </View>
-
-        {/* 구분자 */}
-        {/* <View style={styles.divider} /> */}
-
-        {/* 이미지 영역 */}
-        {postData.imageUrl && (
-          <View style={styles.imageSection}>
-            <Image
-              source={{uri: postData.imageUrl}}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          </View>
-        )}
-
-        {/* 본문 영역 */}
-        <View style={styles.contentSection}>
-          <Text variant="bodyM" color="#374151" style={styles.content}>
-            {postData.content}
-          </Text>
-        </View>
-
-        <PostDetailCommentComponent
-          commentCount={postData.commentCount}
-          comments={comments}
-          onDeleteComment={handleDeleteComment}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}>
+        {/* 헤더 영역 */}
+        <DetailHeader
+          rightElement={
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={handleMenuPress}
+              accessibilityRole="button"
+              accessibilityLabel="더보기 메뉴">
+              <MoreHorizIcon width={24} height={24} color="#111827" />
+            </TouchableOpacity>
+          }
         />
-      </ScrollView>
 
-      <PostDetailInputComponent
-        likeCount={postData.likeCount}
-        isLiked={postData.isLiked}
-        value={comment}
-        onChangeText={setComment}
-        onSend={handleSendComment}
-        onLikePress={handleLikePress}
-        placeholder="댓글을 입력하세요..."
-      />
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}>
+          {/* 작성자 정보 영역 */}
+          <View style={styles.authorSection}>
+            <View style={styles.authorInfo}>
+              <View style={[styles.categoryTag, {backgroundColor: '#06b0b7'}]}>
+                <Text variant="bodyS" color="#FFFFFF" align="center">
+                  {postData.keyword}
+                </Text>
+              </View>
+              <View style={styles.authorDetails}>
+                <Text variant="bodyM" color="#111827">
+                  {postData.author.name}
+                </Text>
+                <Text variant="bodyS" color="#6B7280" style={styles.timeAgo}>
+                  {formatRelativeTime(postData.createdAt)}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* 제목 영역 */}
+          <View style={styles.titleSection}>
+            <Text
+              variant="displayM"
+              weight="semiBold"
+              color="#111827"
+              style={styles.title}>
+              {postData.title}
+            </Text>
+          </View>
+
+          {/* 이미지 영역 */}
+          {postData.imageUrl && (
+            <View style={styles.imageSection}>
+              <Image
+                source={{uri: postData.imageUrl}}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            </View>
+          )}
+
+          {/* 본문 영역 */}
+          <View style={styles.contentSection}>
+            <Text variant="bodyM" color="#374151" style={styles.content}>
+              {postData.content}
+            </Text>
+          </View>
+
+          <PostDetailCommentComponent
+            commentCount={postData.commentCount}
+            comments={comments}
+            onDeleteComment={handleDeleteComment}
+          />
+        </ScrollView>
+
+        <PostDetailInputComponent
+          likeCount={postData.likeCount}
+          isLiked={postData.isLiked}
+          value={comment}
+          onChangeText={setComment}
+          onSend={handleSendComment}
+          onLikePress={handleLikePress}
+          placeholder="댓글을 입력하세요..."
+        />
+      </KeyboardAvoidingView>
 
       {/* 메뉴 모달 */}
       <Modal
@@ -463,6 +477,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  flex: {
+    flex: 1,
   },
   header: {
     height: 69,

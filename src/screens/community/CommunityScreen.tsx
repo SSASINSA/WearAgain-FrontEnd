@@ -1,12 +1,19 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {View, StyleSheet, FlatList, TouchableOpacity} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {PostItemComponent, PostItemProps} from './PostItemComponent';
 import {useCommunityPosts} from '../../hooks/useCommunityPosts';
-import {CommunityPost, toggleCommunityPostLike} from '../../api/communityApi';
+import {
+  CommunityPost,
+  toggleCommunityPostLike,
+  getPostKeywords,
+} from '../../api/communityApi';
 import {formatRelativeTime} from '../../utils/formatDate';
 import PlusIcon from '../../assets/icons/plus.svg';
+import {Text} from '../../components/common/Text';
+
+type FilterType = 'all' | string;
 
 // API 응답을 PostItemProps로 변환
 function mapPostToItemProps(post: CommunityPost): PostItemProps {
@@ -26,6 +33,9 @@ function mapPostToItemProps(post: CommunityPost): PostItemProps {
 
 export default function CommunityScreen() {
   const navigation = useNavigation<any>();
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const keyword = selectedFilter === 'all' ? null : selectedFilter;
   const {
     posts,
     isLoading,
@@ -36,14 +46,35 @@ export default function CommunityScreen() {
     updatePost,
   } = useCommunityPosts({
     limit: 10,
+    keyword,
   });
   const [likingPostIds, setLikingPostIds] = useState<Set<string>>(new Set());
+  const refreshRef = useRef(refresh);
 
-  // 화면이 포커스될 때 리프레시
+  useEffect(() => {
+    refreshRef.current = refresh;
+  }, [refresh]);
+
+  useEffect(() => {
+    const fetchKeywords = async () => {
+      try {
+        const keywordsList = await getPostKeywords();
+        setKeywords(keywordsList);
+      } catch (error) {
+        console.error('Failed to fetch keywords:', error);
+        // 기본값으로 폴백
+        setKeywords(['질문', '리뷰', '수선']);
+      }
+    };
+
+    fetchKeywords();
+  }, []);
+
+  // 화면이 포커스될 때 리프레시 (키워드 변경과는 무관하게 1번만)
   useFocusEffect(
     React.useCallback(() => {
-      refresh();
-    }, [refresh]),
+      refreshRef.current();
+    }, []),
   );
 
   const handlePostPress = (postId: string) => {
@@ -86,6 +117,24 @@ export default function CommunityScreen() {
     navigation.navigate('PostRegister');
   };
 
+  const renderFilterButton = (value: FilterType, label: string) => {
+    const isSelected = selectedFilter === value;
+    return (
+      <TouchableOpacity
+        key={value}
+        style={[styles.filterButton, isSelected && styles.filterButtonSelected]}
+        onPress={() => setSelectedFilter(value)}
+        activeOpacity={0.7}>
+        <Text
+          variant="labelM"
+          color={isSelected ? '#FFFFFF' : '#6B7280'}
+          style={styles.filterButtonText}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   const handleEndReached = () => {
     if (hasNext && !isLoading) {
       loadMore();
@@ -105,6 +154,12 @@ export default function CommunityScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.filterContainer}>
+        <View style={styles.filterContent}>
+          {renderFilterButton('all', '전체')}
+          {keywords.map(kw => renderFilterButton(kw, kw))}
+        </View>
+      </View>
       <FlatList
         data={postItems}
         renderItem={renderPostItem}
@@ -135,6 +190,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F2F2F2',
+  },
+  filterContainer: {
+    backgroundColor: '#F2F2F2',
+    paddingVertical: 12,
+  },
+  filterContent: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    marginRight: 8,
+  },
+  filterButtonSelected: {
+    backgroundColor: '#06B0B7',
+  },
+  filterButtonText: {
+    fontWeight: '600',
   },
   listContainer: {
     paddingHorizontal: 16,
