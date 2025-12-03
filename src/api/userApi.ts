@@ -37,6 +37,10 @@ export const userApi = {
     return response.data;
   },
 
+  async updateDisplayName(displayName: string): Promise<void> {
+    await apiClient.patch('/users/display-name', {displayName});
+  },
+
   async changePassword(
     userId: string,
     data: {
@@ -47,8 +51,8 @@ export const userApi = {
     await apiClient.put(`/users/${userId}/password`, data);
   },
 
-  async deleteAccount(userId: string): Promise<void> {
-    await apiClient.delete(`/users/${userId}`);
+  async deleteAccount(): Promise<void> {
+    await apiClient.delete('/users');
   },
 
   async getUserSummary(): Promise<UserSummaryResponse> {

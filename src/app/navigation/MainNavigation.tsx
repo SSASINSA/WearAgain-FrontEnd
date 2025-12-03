@@ -9,6 +9,7 @@ import GrowingScreen from '../../screens/growing/GrowingScreen';
 import RankingScreen from '../../screens/ranking/RankingScreen';
 import StoreStack from './StoreNavigation';
 import ApplicationsNavigation from './ApplicationsNavigation';
+import ProfileSettingsScreen from '../../screens/mypage/ProfileSettingsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -22,6 +23,7 @@ export default function MainNavigation() {
       <Stack.Screen name="PostEdit" component={PostEditScreen} />
       <Stack.Screen name="Growing" component={GrowingScreen} />
       <Stack.Screen name="Ranking" component={RankingScreen} />
+      <Stack.Screen name="ProfileSettings" component={ProfileSettingsScreen} />
       <Stack.Screen
         name="ApplicationsStack"
         component={ApplicationsNavigation}
