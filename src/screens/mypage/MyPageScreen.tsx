@@ -10,10 +10,10 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import Svg, {Circle, Path, Rect} from 'react-native-svg';
 import {Text} from '../../components/common/Text';
-import {useAuthStore} from '../../store/auth.store';
 import {useUserSummary} from '../../hooks/useAuth';
 import TicketIcon from '../../assets/icons/ticket.svg';
 import PromoImage from '../../assets/images/more-promo.png';
+import SettingIcon from '../../assets/icons/setting.svg';
 import CommentIcon from '../../assets/icons/comment_mypage.svg';
 import ReceiptIcon from '../../assets/icons/receipt.svg';
 
@@ -42,7 +42,6 @@ function MenuItem({label, icon, onPress, showDivider = true}: MenuItemProps) {
 
 export default function MyPageScreen() {
   const navigation = useNavigation();
-  const logout = useAuthStore(state => state.logout);
   const {data: summary} = useUserSummary();
 
   const displayName = useMemo(
@@ -100,15 +99,8 @@ export default function MyPageScreen() {
     Alert.alert('21% 파티란?', '프로모션 상세는 추후 연결됩니다.');
   };
 
-  const handleLogout = () => {
-    Alert.alert('로그아웃', '로그아웃 하시겠습니까?', [
-      {text: '취소', style: 'cancel'},
-      {
-        text: '로그아웃',
-        style: 'destructive',
-        onPress: () => logout(),
-      },
-    ]);
+  const handlePressSettings = () => {
+    navigation.navigate('ProfileSettings' as never);
   };
 
   return (
@@ -124,8 +116,8 @@ export default function MyPageScreen() {
             님 반갑습니다.
           </Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <LogoutIcon />
+        <TouchableOpacity onPress={handlePressSettings} style={styles.logoutButton}>
+          <SettingIcon width={30} height={30} />
         </TouchableOpacity>
       </View>
 
@@ -306,25 +298,6 @@ function ChevronRightIcon() {
   );
 }
 
-function LogoutIcon() {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M9 6V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-1"
-        stroke="#111827"
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M13 12H3m0 0 2.5-2.5M3 12l2.5 2.5"
-        stroke="#111827"
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
 
 const styles = StyleSheet.create({
   safeArea: {
