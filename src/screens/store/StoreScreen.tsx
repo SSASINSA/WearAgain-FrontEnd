@@ -1,63 +1,135 @@
-import React from 'react';
-import {ScrollView, View, StyleSheet} from 'react-native';
+import React, {useMemo, useCallback, useState, useRef, useEffect} from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  View,
+} from 'react-native';
+import {useFocusEffect} from '@react-navigation/native';
 import {Text} from '../../components/common/Text';
 import ProductCard from './product/ProductCard';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import StoreHeader from './StoreHeader';
+import {useStoreItemsList} from '../../hooks/useStore';
 
 export default function StoreScreen() {
-  const products = [
-      {
-        id: '1',
-        name: '패션 마스크',
-        price: 150,
-        image: require('../../assets/images/store/fashionmask.png'),
-      },
-      {
-        id: '2',
-        name: '카드 지갑',
-        price: 150,
-        image: require('../../assets/images/store/fashionmask.png'),
-      },
-      {
-        id: '3',
-        name: '에코백',
-        price: 150,
-        image: require('../../assets/images/store/fashionmask.png'),
-      },
-      {
-        id: '4',
-        name: '앞치마',
-        price: 200,
-        image: require('../../assets/images/store/fashionmask.png'),
-      },
-    ];
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+  
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useStoreItemsList({
+    size: 20,
+  });
 
-  if (!products.length) {
+  const items = useMemo(
+    () => data?.pages.flatMap(page => page.items) ?? [],
+    [data],
+  );
+
+  const refetchRef = useRef(refetch);
+
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+
+  // 화면이 포커스될 때 리프레시 (스크롤 모션 없이)
+  useFocusEffect(
+    React.useCallback(() => {
+      refetchRef.current();
+    }, []),
+  );
+
+  const handleRefresh = async () => {
+    setIsManualRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  };
+
+  const renderFooter = () => {
+    if (!isFetchingNextPage) {
+      return null;
+    }
     return (
-      <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
-        <Text variant="bodyM" color="#999">상품이 없습니다.</Text>
+      <View style={styles.footer}>
+        <ActivityIndicator size="small" color="#06B0B7" />
       </View>
     );
-  }
+  };
+
+  const renderStateView = (message: string, showRetry?: boolean) => (
+    <View style={styles.stateContainer}>
+      <Text variant="bodyM" color="#6B7280" style={styles.stateText}>
+        {message}
+      </Text>
+      {showRetry ? (
+        <View style={styles.retryButton}>
+          <Text variant="labelM" color="#FFFFFF">
+            다시 시도
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* 헤더 영역 */}
       <StoreHeader />
 
-      <ScrollView
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.gridContainer}>
-          {products.map(product => (
-            <View key={product.id} style={styles.itemWrapper}>
-              <ProductCard product={product} />
-            </View>
-          ))}
+      {isLoading && items.length === 0 ? (
+        <View style={styles.stateContainer}>
+          <ActivityIndicator size="large" color="#06B0B7" />
         </View>
-      </ScrollView>
+      ) : isError && items.length === 0 ? (
+        renderStateView('상점을 불러오지 못했습니다.', true)
+      ) : items.length === 0 ? (
+        renderStateView('현재 판매 중인 상품이 없습니다.')
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={item => item.id}
+          numColumns={2}
+          columnWrapperStyle={styles.columnWrapper}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          renderItem={({item}) => (
+            <View style={styles.itemWrapper}>
+              <ProductCard
+                product={{
+                  id: item.id,
+                  name: item.name,
+                  price: item.price,
+                  image: item.thumbnailUrl
+                    ? {uri: item.thumbnailUrl}
+                    : require('../../assets/images/store/fashionmask.png'),
+                }}
+              />
+            </View>
+          )}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.8}
+          ListFooterComponent={renderFooter}
+          refreshControl={
+            <RefreshControl refreshing={isManualRefreshing} onRefresh={handleRefresh} />
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -72,14 +144,35 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 24,
   },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
+  stateContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  stateText: {
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#06B0B7',
+    borderRadius: 999,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
   },
   itemWrapper: {
+    width: '48%',
+    marginBottom: 16,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+  },
+  centered: {
     flex: 1,
-    minWidth: '40%',
-    maxWidth: '48%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footer: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
 });

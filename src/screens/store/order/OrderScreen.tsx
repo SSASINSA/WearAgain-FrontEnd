@@ -1,67 +1,12 @@
-import React, {useMemo} from 'react';
-import {ScrollView, View, StyleSheet} from 'react-native';
+import React, {useMemo, useCallback} from 'react';
+import {ScrollView, View, StyleSheet, ActivityIndicator, TouchableOpacity} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
+import {useFocusEffect} from '@react-navigation/native';
 import {Text} from '../../../components/common/Text';
 import OrderDateGroup from './OrderDateGroup';
 import {OrderItem} from './OrderCard';
 import DetailHeader from '../../../components/common/DetailHeader';
-// 더미데이터
-const dummyOrders: (OrderItem & {orderDate: string})[] = [
-  {
-    id: '1',
-    orderDate: '24.01.15',
-    productName: '패션 마스크',
-    pickupLocation: '강남점',
-    quantity: 2,
-    price: 300,
-    image: require('../../../assets/images/store/fashionmask.png'),
-  },
-  {
-    id: '2',
-    orderDate: '24.01.15',
-    productName: '에코백',
-    pickupLocation: '강남점',
-    quantity: 1,
-    price: 150,
-    image: require('../../../assets/images/store/fashionmask.png'),
-  },
-  {
-    id: '3',
-    orderDate: '24.01.15',
-    productName: '카드 지갑',
-    pickupLocation: '홍대점',
-    quantity: 1,
-    price: 150,
-    image: require('../../../assets/images/store/fashionmask.png'),
-  },
-  {
-    id: '4',
-    orderDate: '24.01.10',
-    productName: '앞치마',
-    pickupLocation: '홍대점',
-    quantity: 3,
-    price: 600,
-    image: require('../../../assets/images/store/fashionmask.png'),
-  },
-  {
-    id: '5',
-    orderDate: '24.01.05',
-    productName: '패션 마스크',
-    pickupLocation: '홍대점',
-    quantity: 1,
-    price: 150,
-    image: require('../../../assets/images/store/fashionmask.png'),
-  },
-  {
-    id: '6',
-    orderDate: '24.01.05',
-    productName: '에코백',
-    pickupLocation: '명동점',
-    quantity: 2,
-    price: 300,
-    image: require('../../../assets/images/store/fashionmask.png'),
-  },
-];
+import {useStoreOrdersList} from '../../../hooks/useStore';
 
 function InfoIcon() {
   return (
@@ -91,24 +36,100 @@ function InfoIcon() {
   );
 }
 
+// 날짜를 'YY.MM.DD' 형식으로 변환
+function formatOrderDate(dateString: string): string {
+  const date = new Date(dateString);
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}.${month}.${day}`;
+}
+
 export default function OrderScreen() {
-  // 주문일시별로 그룹화
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useStoreOrdersList();
+
+  // 화면에 진입할 때마다 주문 목록 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
+
+  // API 응답을 OrderItem 형식으로 변환하고 주문일시별로 그룹화
   const groupedOrders = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
     const groups: Record<string, OrderItem[]> = {};
 
-    dummyOrders.forEach(order => {
-      if (!groups[order.orderDate]) {
-        groups[order.orderDate] = [];
-      }
-      const {orderDate, ...orderItem} = order;
-      groups[order.orderDate].push(orderItem);
+    // 모든 페이지의 주문을 순회
+    data.pages.forEach(page => {
+      page.orders.forEach(order => {
+        const orderDate = formatOrderDate(order.purchasedAt);
+        
+        if (!groups[orderDate]) {
+          groups[orderDate] = [];
+        }
+
+        const orderItem: OrderItem = {
+          id: String(order.orderId),
+          itemId: String(order.itemId),
+          productName: order.itemName,
+          pickupLocation: order.pickupLocation,
+          quantity: order.quantity,
+          price: order.totalPrice,
+          image: order.itemThumbnailUrl
+            ? {uri: order.itemThumbnailUrl}
+            : require('../../../assets/images/store/fashionmask.png'),
+        };
+
+        groups[orderDate].push(orderItem);
+      });
     });
 
     // 주문일시를 최신순으로 정렬
     return Object.entries(groups).sort((a, b) => {
       return b[0].localeCompare(a[0]);
     });
-  }, []);
+  }, [data]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <DetailHeader title="주문 내역" useTopInset={true} />
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color="#06B0B7" />
+        </View>
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.container}>
+        <DetailHeader title="주문 내역" useTopInset={true} />
+        <View style={styles.emptyContainer}>
+          <Text variant="bodyM" color="#6B7280" style={styles.stateText}>
+            주문 내역을 불러오지 못했습니다.
+          </Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+            <Text variant="labelM" color="#FFFFFF">
+              다시 시도
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   if (groupedOrders.length === 0) {
     return (
@@ -129,7 +150,20 @@ export default function OrderScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        onScroll={({nativeEvent}) => {
+          const {layoutMeasurement, contentOffset, contentSize} = nativeEvent;
+          const paddingToBottom = 20;
+          if (
+            layoutMeasurement.height + contentOffset.y >=
+            contentSize.height - paddingToBottom
+          ) {
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
+            }
+          }
+        }}
+        scrollEventThrottle={400}>
         <View style={styles.noticeSection}>
           <View style={styles.noticeContent}>
             <View style={styles.noticeIcon}>
@@ -145,9 +179,14 @@ export default function OrderScreen() {
             key={orderDate}
             orderDate={orderDate}
             orders={orders}
-            isLast={index === groupedOrders.length - 1}
+            isLast={index === groupedOrders.length - 1 && !hasNextPage}
           />
         ))}
+        {isFetchingNextPage && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#06B0B7" />
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -190,6 +229,20 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stateText: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#06B0B7',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  loadingContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
 });
 
