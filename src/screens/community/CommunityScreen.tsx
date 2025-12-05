@@ -1,5 +1,11 @@
 import React, {useState, useEffect, useRef} from 'react';
-import {View, StyleSheet, FlatList, TouchableOpacity} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {PostItemComponent, PostItemProps} from './PostItemComponent';
@@ -36,10 +42,10 @@ export default function CommunityScreen() {
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
   const [keywords, setKeywords] = useState<string[]>([]);
   const keyword = selectedFilter === 'all' ? null : selectedFilter;
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   const {
     posts,
     isLoading,
-    isRefreshing,
     hasNext,
     loadMore,
     refresh,
@@ -152,6 +158,15 @@ export default function CommunityScreen() {
 
   const postItems = posts.map(mapPostToItemProps);
 
+  const handleRefresh = async () => {
+    setIsManualRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.filterContainer}>
@@ -169,8 +184,12 @@ export default function CommunityScreen() {
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
-        refreshing={isRefreshing}
-        onRefresh={refresh}
+        refreshControl={
+          <RefreshControl
+            refreshing={isManualRefreshing}
+            onRefresh={handleRefresh}
+          />
+        }
       />
 
       {/* 하단 등록 버튼 */}

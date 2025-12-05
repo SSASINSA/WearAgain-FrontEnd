@@ -1,5 +1,5 @@
-import React from 'react';
-import {View, Image, StyleSheet} from 'react-native';
+import React, {useState, useRef} from 'react';
+import {View, Image, StyleSheet, FlatList} from 'react-native';
 import {Text} from '../../components/common/Text';
 import CalendarIcon from '../../assets/icons/eventCalendarIcon.svg';
 import LocationIcon from '../../assets/icons/eventLocationIcon.svg';
@@ -14,16 +14,88 @@ export default function EventDetailContent({
   event,
   imageSource,
 }: EventDetailContentProps) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const flatListRef = useRef<FlatList>(null);
+
+  // 이미지 타입 정의
+  type ImageItem = {
+    imageId: number;
+    url: string;
+    altText: string;
+    displayOrder: number;
+    isLocal?: boolean;
+    source?: any;
+  };
+  
+  // imageSource가 있으면 첫 번째로 추가, 아니면 이벤트에서 내려온 이미지 배열 그대로 사용
+  const imagesToDisplay: ImageItem[] = imageSource
+    ? [
+        {
+          imageId: -1,
+          url: '',
+          altText: '',
+          displayOrder: 0,
+          isLocal: true,
+          source: imageSource,
+        },
+        ...event.images,
+      ]
+    : event.images;
+
+  const handleViewableItemsChanged = useRef(({viewableItems}: any) => {
+    if (viewableItems.length > 0) {
+      setCurrentImageIndex(viewableItems[0].index || 0);
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+  }).current;
+
+  const renderImageItem = ({item}: {item: ImageItem}) => {
+    return (
+      <View style={styles.imageWrapper}>
+        {item.isLocal && item.source ? (
+          <Image source={item.source} style={styles.image} />
+        ) : (
+          <Image source={{uri: item.url}} style={styles.image} />
+        )}
+      </View>
+    );
+  };
+
   return (
     <>
-      {/* Hero Image */}
-      <View style={styles.imageContainer}>
-        {imageSource ? (
-          <Image source={imageSource} style={styles.image} />
-        ) : event.imageUrl ? (
-          <Image source={{uri: event.imageUrl}} style={styles.image} />
-        ) : null}
-      </View>
+      {/* Hero Images - Carousel */}
+      {imagesToDisplay.length > 0 ? (
+        <View style={styles.imageContainer}>
+          <FlatList
+            ref={flatListRef}
+            data={imagesToDisplay}
+            renderItem={renderImageItem}
+            keyExtractor={(item, index) => `image-${item.imageId}-${index}`}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onViewableItemsChanged={handleViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
+            decelerationRate="fast"
+          />
+          {imagesToDisplay.length > 1 && (
+            <View style={styles.paginationContainer}>
+              {imagesToDisplay.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.paginationDot,
+                    index === currentImageIndex && styles.paginationDotActive,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      ) : null}
 
       {/* Content */}
       <View style={styles.contentContainer}>
@@ -88,11 +160,35 @@ const styles = StyleSheet.create({
   imageContainer: {
     width: '100%',
     aspectRatio: 1,
+    position: 'relative',
+  },
+  imageWrapper: {
+    aspectRatio: 1,
   },
   image: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 16,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  paginationDotActive: {
+    backgroundColor: '#FFFFFF',
+    width: 24,
   },
   contentContainer: {
     padding: 16,

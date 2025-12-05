@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {
   View,
   StyleSheet,
@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   ListRenderItemInfo,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {EventCard} from './EventCard';
 import {useEventsList, EventSummary} from '../../hooks/useEvents';
 import {Text} from '../../components/common/Text';
@@ -25,6 +25,7 @@ const FILTER_OPTIONS: Array<{value: FilterType; label: string}> = [
 export default function EventScreen() {
   const navigation = useNavigation<any>();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
 
   const filterParams =
     selectedFilter === 'all'
@@ -41,6 +42,28 @@ export default function EventScreen() {
     isFetchingNextPage,
     isRefetching,
   } = useEventsList(filterParams);
+
+  const refetchRef = useRef(refetch);
+
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+
+  // 화면이 포커스될 때 리프레시 (스크롤 모션 없이)
+  useFocusEffect(
+    React.useCallback(() => {
+      refetchRef.current();
+    }, []),
+  );
+
+  const handleRefresh = async () => {
+    setIsManualRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  };
 
   const events =
     data?.pages.flatMap((page: {events: EventSummary[]}) => page.events) ?? [];
@@ -133,7 +156,7 @@ export default function EventScreen() {
       ) : isError && events.length === 0 ? (
         renderStateView('이벤트를 불러오지 못했습니다.', true)
       ) : events.length === 0 ? (
-        renderStateView('등록된 이벤트가 없습니다.', true)
+        renderStateView('등록된 이벤트가 없습니다.', false)
       ) : (
         <FlatList
           data={events}
@@ -146,7 +169,7 @@ export default function EventScreen() {
           onEndReachedThreshold={0.8}
           ListFooterComponent={renderFooter}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+            <RefreshControl refreshing={isManualRefreshing} onRefresh={handleRefresh} />
           }
         />
       )}
