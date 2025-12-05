@@ -1,14 +1,15 @@
 import React from 'react';
-import {View, StyleSheet, Image, ImageSourcePropType} from 'react-native';
+import {View, StyleSheet, Image, ImageSourcePropType, ImageURISource} from 'react-native';
 import {Text} from '../../../components/common/Text';
 
 export interface OrderItem {
   id: string;
+  itemId: string;
   productName: string;
   pickupLocation: string;
   quantity: number;
   price: number;
-  image: ImageSourcePropType;
+  image: ImageSourcePropType | ImageURISource;
 }
 
 interface OrderCardProps {

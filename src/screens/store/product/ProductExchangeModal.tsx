@@ -13,24 +13,28 @@ import {Text} from '../../../components/common/Text';
 interface ProductExchangeModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onConfirm: (location: string) => void;
+  onConfirm: (location: string, quantity: number) => void;
   isPending?: boolean;
+  locations?: string[];
+  maxQuantity?: number;
 }
-
-const LOCATIONS = ['서울', '경기', '인천', '강원', '충청', '전라', '경상', '제주'];
 
 export default function ProductExchangeModal({
   isVisible,
   onClose,
   onConfirm,
   isPending = false,
+  locations = [],
+  maxQuantity,
 }: ProductExchangeModalProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
+  const [quantity, setQuantity] = useState<number>(1);
 
   const handleClose = () => {
     setSelectedLocation('');
     setIsLocationDropdownOpen(false);
+    setQuantity(1);
     onClose();
   };
 
@@ -38,10 +42,12 @@ export default function ProductExchangeModal({
     if (!selectedLocation) {
       return;
     }
-    onConfirm(selectedLocation);
+    onConfirm(selectedLocation, quantity);
   };
 
-  const confirmDisabled = !selectedLocation || isPending;
+  const locationOptions = locations;
+
+  const confirmDisabled = !selectedLocation || isPending || quantity <= 0;
 
   return (
     <Modal
@@ -95,7 +101,7 @@ export default function ProductExchangeModal({
                       style={styles.dropdownScrollView}
                       showsVerticalScrollIndicator={true}
                       nestedScrollEnabled={true}>
-                      {LOCATIONS.map(location => (
+                      {locationOptions.map((location: string) => (
                         <TouchableOpacity
                           key={location}
                           style={styles.dropdownItem}
@@ -115,6 +121,53 @@ export default function ProductExchangeModal({
                   </View>
                 )}
               </View>
+            </View>
+
+            <View style={styles.optionSection}>
+              <Text variant="bodyL" color="#111827" style={styles.optionTitle}>
+                수량
+              </Text>
+              <View style={styles.quantityContainer}>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() =>
+                    !isPending &&
+                    setQuantity(prev => (prev > 1 ? prev - 1 : 1))
+                  }
+                  disabled={isPending}
+                >
+                  <Text variant="headlineM" color="#111827">
+                    -
+                  </Text>
+                </TouchableOpacity>
+                <Text variant="headlineM" color="#111827" style={styles.quantityText}>
+                  {quantity}
+                </Text>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() =>
+                    !isPending &&
+                    setQuantity(prev =>
+                      typeof maxQuantity === 'number'
+                        ? Math.min(prev + 1, maxQuantity)
+                        : prev + 1,
+                    )
+                  }
+                  disabled={isPending}
+                >
+                  <Text variant="headlineM" color="#111827">
+                    +
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {typeof maxQuantity === 'number' && (
+                <Text
+                  variant="bodyM"
+                  color="#9CA3AF"
+                  style={styles.maxQuantityText}>
+                  사용자별 최대 구매 수량은 {maxQuantity}개입니다.
+                </Text>
+              )}
             </View>
           </ScrollView>
 
@@ -171,7 +224,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderBottomWidth: 0,
-    height: 400,
+    height: 470,
     width: '100%',
   },
   modalHeader: {
@@ -280,6 +333,27 @@ const styles = StyleSheet.create({
   },
   dropdownScrollView: {
     maxHeight: 150,
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  quantityButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  quantityText: {
+    marginHorizontal: 16,
+  },
+  maxQuantityText: {
+    marginTop: 8,
   },
 });
 
