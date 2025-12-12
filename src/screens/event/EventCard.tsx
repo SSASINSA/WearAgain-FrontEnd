@@ -77,7 +77,7 @@ export function EventCard({
               {/* 달력 아이콘 */}
               <CalendarIcon width={12.25} height={14} color="#6B7280" />
             </View>
-            <Text variant="bodyM" color="#6b7280" style={styles.infoText}>
+            <Text variant="bodyM" color="#6b7280" style={styles.infoText} numberOfLines={2}>
               {startDate} - {endDate}
             </Text>
           </View>
@@ -87,7 +87,7 @@ export function EventCard({
               {/* 위치 아이콘 */}
               <LocationIcon width={10.5} height={14} color="#6B7280" />
             </View>
-            <Text variant="bodyM" color="#6b7280" style={styles.infoText}>
+            <Text variant="bodyM" color="#6b7280" style={styles.infoText} numberOfLines={2}>
               {location}
             </Text>
           </View>
@@ -102,7 +102,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     width: '100%',
-    height: 356,
     overflow: 'hidden',
     marginVertical: 8,
     shadowColor: '#000',
@@ -141,7 +140,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    flex: 1,
   },
   title: {
     marginBottom: 8,
@@ -156,7 +154,7 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 8,
   },
   iconContainer: {

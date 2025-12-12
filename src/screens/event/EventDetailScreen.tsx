@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {
   View,
   StyleSheet,
@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import {useRoute, RouteProp} from '@react-navigation/native';
+import {useRoute, RouteProp, useFocusEffect} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Text} from '../../components/common/Text';
 import EventDetailContent from './EventDetailContent';
@@ -29,9 +29,22 @@ type EventDetailRouteProp = RouteProp<EventDetailParamList, 'EventDetail'>;
 export default function EventDetailScreen() {
   const route = useRoute<EventDetailRouteProp>();
   const {eventId} = route.params;
-  const {data: event, isLoading, isError} = useEventDetail(eventId);
+  const {data: event, isLoading, isError, refetch} = useEventDetail(eventId);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const applyEventMutation = useApplyEvent();
+
+  const refetchRef = useRef(refetch);
+
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+
+  // 화면이 포커스될 때 리프레시
+  useFocusEffect(
+    React.useCallback(() => {
+      refetchRef.current();
+    }, []),
+  );
 
   const handleApplicationConfirm = (optionId: number, memo: string) => {
     if (!event) {
@@ -96,25 +109,15 @@ export default function EventDetailScreen() {
     option => (option.remainingCount ?? 0) > 0,
   );
 
-  const isUserApplied = event.userApplication?.status === 'APPLIED';
   const isActionPending = applyEventMutation.isPending;
   const isEventOpen = event.status === '모집중';
-  const isApplyDisabled =
-    isUserApplied ||
-    !isEventOpen ||
-    availableOptions.length === 0;
+  const isApplyDisabled = !isEventOpen;
 
   const getButtonText = () => {
-    if (isUserApplied) {
-      return '신청 완료';
-    }
     if (!isEventOpen) {
       if (event.status === '예정') {
         return '신청 예정';
       }
-      return '신청 마감';
-    }
-    if (availableOptions.length === 0) {
       return '신청 마감';
     }
     return '신청하기';
@@ -150,6 +153,7 @@ export default function EventDetailScreen() {
         onClose={() => setIsModalVisible(false)}
         onConfirm={handleApplicationConfirm}
         options={event.options}
+        optionDepth={event.optionDepth}
         isPending={applyEventMutation.isPending}
       />
     </SafeAreaView>

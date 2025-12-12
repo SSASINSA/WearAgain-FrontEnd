@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {
   View,
   StyleSheet,
@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   ListRenderItemInfo,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {EventCard} from './EventCard';
 import {useEventsList, EventSummary} from '../../hooks/useEvents';
 import {Text} from '../../components/common/Text';
@@ -25,6 +25,7 @@ const FILTER_OPTIONS: Array<{value: FilterType; label: string}> = [
 export default function EventScreen() {
   const navigation = useNavigation<any>();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
 
   const filterParams =
     selectedFilter === 'all'
@@ -42,8 +43,54 @@ export default function EventScreen() {
     isRefetching,
   } = useEventsList(filterParams);
 
-  const events =
+  const refetchRef = useRef(refetch);
+
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+
+  // 화면이 포커스될 때 리프레시 (스크롤 모션 없이)
+  useFocusEffect(
+    React.useCallback(() => {
+      refetchRef.current();
+    }, []),
+  );
+
+  const handleRefresh = async () => {
+    setIsManualRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  };
+
+  // 상태별 정렬 우선순위: 모집중 > 예정 > 마감
+  const getStatusPriority = (status: string): number => {
+    switch (status) {
+      case '모집중':
+        return 1;
+      case '예정':
+        return 2;
+      case '마감':
+        return 3;
+      default:
+        return 4;
+    }
+  };
+
+  const allEvents =
     data?.pages.flatMap((page: {events: EventSummary[]}) => page.events) ?? [];
+
+  // '전체' 필터일 때만 정렬 적용
+  const events =
+    selectedFilter === 'all'
+      ? [...allEvents].sort((a, b) => {
+          const priorityA = getStatusPriority(a.status);
+          const priorityB = getStatusPriority(b.status);
+          return priorityA - priorityB;
+        })
+      : allEvents;
 
   const handleEventPress = (event: EventSummary) => {
     navigation.navigate('EventDetail', {
@@ -133,7 +180,7 @@ export default function EventScreen() {
       ) : isError && events.length === 0 ? (
         renderStateView('이벤트를 불러오지 못했습니다.', true)
       ) : events.length === 0 ? (
-        renderStateView('등록된 이벤트가 없습니다.', true)
+        renderStateView('등록된 이벤트가 없습니다.', false)
       ) : (
         <FlatList
           data={events}
@@ -146,7 +193,7 @@ export default function EventScreen() {
           onEndReachedThreshold={0.8}
           ListFooterComponent={renderFooter}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+            <RefreshControl refreshing={isManualRefreshing} onRefresh={handleRefresh} />
           }
         />
       )}

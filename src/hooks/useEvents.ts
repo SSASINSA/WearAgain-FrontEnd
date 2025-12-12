@@ -64,6 +64,7 @@ export type EventDetail = {
     altText: string;
     displayOrder: number;
   }>;
+  optionDepth: number;
   options: EventOption[];
   userApplication: EventUserApplication;
 };
@@ -157,6 +158,7 @@ function toDetail(payload: EventDetailResponse): EventDetail {
       altText: img.altText,
       displayOrder: img.displayOrder,
     })),
+    optionDepth: payload.optionDepth,
     options: mapOptions(payload.options),
     userApplication: mapUserApplication(payload.userApplication),
   };

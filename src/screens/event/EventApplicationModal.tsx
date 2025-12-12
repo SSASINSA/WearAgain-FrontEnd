@@ -1,11 +1,11 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Platform,
+  ScrollView,
 } from 'react-native';
 import Modal from 'react-native-modal';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
@@ -17,37 +17,199 @@ interface EventApplicationModalProps {
   onClose: () => void;
   onConfirm: (optionId: number, memo: string) => void;
   options: EventOption[];
+  optionDepth: number;
   isPending?: boolean;
 }
+
+// 선택된 옵션 경로를 추적하는 타입
+type SelectedOptionPath = (number | null)[];
 
 export default function EventApplicationModal({
   isVisible,
   onClose,
   onConfirm,
   options,
+  optionDepth,
   isPending = false,
 }: EventApplicationModalProps) {
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  // 각 레벨별로 선택된 옵션 ID를 저장 (null은 선택 안함을 의미)
+  const [selectedOptions, setSelectedOptions] = useState<SelectedOptionPath>(
+    Array(optionDepth).fill(null),
+  );
   const [memo, setMemo] = useState('');
-  const [isOptionDropdownOpen, setIsOptionDropdownOpen] = useState(false);
+  const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
 
-  const availableOptions = options.filter(option => (option.remainingCount ?? 0) > 0);
+  // 모달이 닫힐 때 상태 초기화
+  useEffect(() => {
+    if (!isVisible) {
+      setSelectedOptions(Array(optionDepth).fill(null));
+      setMemo('');
+      setOpenDropdownIndex(null);
+    }
+  }, [isVisible, optionDepth]);
 
   const handleClose = () => {
-    setSelectedOption(null);
+    setSelectedOptions(Array(optionDepth).fill(null));
     setMemo('');
-    setIsOptionDropdownOpen(false);
+    setOpenDropdownIndex(null);
     onClose();
   };
 
-  const handleConfirm = () => {
-    if (!selectedOption) {
-      return;
+  // 특정 레벨의 옵션 목록을 가져오는 함수
+  const getOptionsForLevel = (level: number): EventOption[] => {
+    if (level === 0) {
+      return options;
     }
-    onConfirm(selectedOption, memo.trim());
+
+    // 이전 레벨까지의 선택 경로를 따라가기
+    let currentOptions = options;
+    for (let i = 0; i < level; i++) {
+      const selectedId = selectedOptions[i];
+      if (selectedId === null) {
+        return [];
+      }
+      const selectedOption = currentOptions.find(
+        opt => opt.optionId === selectedId,
+      );
+      if (!selectedOption || !selectedOption.children) {
+        return [];
+      }
+      currentOptions = selectedOption.children;
+    }
+    return currentOptions;
   };
 
-  const confirmDisabled = !selectedOption || isPending;
+  // 특정 레벨에서 옵션 선택
+  const handleOptionSelect = (level: number, optionId: number | null) => {
+    const newSelectedOptions = [...selectedOptions];
+    newSelectedOptions[level] = optionId;
+    // 선택된 레벨 이후의 모든 선택을 초기화
+    for (let i = level + 1; i < optionDepth; i++) {
+      newSelectedOptions[i] = null;
+    }
+    setSelectedOptions(newSelectedOptions);
+    setOpenDropdownIndex(null);
+  };
+
+  // 최종 선택된 옵션 ID를 찾는 함수 (가장 깊은 레벨의 선택된 옵션)
+  const getFinalOptionId = (): number | null => {
+    // 가장 깊은 레벨부터 역순으로 확인하여 선택된 옵션을 찾음
+    for (let i = optionDepth - 1; i >= 0; i--) {
+      if (selectedOptions[i] !== null) {
+        return selectedOptions[i];
+      }
+    }
+    return null;
+  };
+
+  const handleConfirm = () => {
+    const finalOptionId = getFinalOptionId();
+    if (finalOptionId === null) {
+      return;
+    }
+    onConfirm(finalOptionId, memo.trim());
+  };
+
+  const finalOptionId = getFinalOptionId();
+  const confirmDisabled = finalOptionId === null || isPending;
+
+  // 각 레벨별로 드롭다운 렌더링
+  const renderOptionDropdown = (level: number) => {
+    const levelOptions = getOptionsForLevel(level);
+    const selectedOptionId = selectedOptions[level];
+    const isOpen = openDropdownIndex === level;
+
+    // 선택 가능한 옵션 필터링 (remainingCount > 0인 옵션)
+    const availableOptions = levelOptions.filter(option => {
+      if (option.capacity === null) {
+        return true; // capacity가 null이면 항상 선택 가능
+      }
+      return (option.remainingCount ?? 0) > 0;
+    });
+
+    const selectedOption = levelOptions.find(
+      opt => opt.optionId === selectedOptionId,
+    );
+
+    // 이전 레벨이 선택되지 않았거나 옵션이 없으면 드롭다운 비활성화
+    const isDisabled = level > 0 && selectedOptions[level - 1] === null;
+    const hasOptions = availableOptions.length > 0;
+
+    return (
+      <View key={level} style={styles.optionSection}>
+        <View style={styles.dropdownContainer}>
+          <TouchableOpacity
+            style={[
+              styles.dropdownButton,
+              (isDisabled || !hasOptions) && styles.dropdownButtonDisabled,
+            ]}
+            onPress={() => {
+              if (!isDisabled && hasOptions) {
+                setOpenDropdownIndex(isOpen ? null : level);
+              }
+            }}
+            disabled={isDisabled || !hasOptions}>
+            <Text
+              variant="bodyM"
+              color={
+                isDisabled || !hasOptions
+                  ? '#9CA3AF'
+                  : selectedOptionId
+                  ? '#111827'
+                  : '#6b7280'
+              }
+              style={styles.dropdownButtonText}>
+              {isDisabled
+                ? '이전 옵션을 먼저 선택해주세요'
+                : !hasOptions
+                ? '선택 가능한 옵션이 없습니다'
+                : selectedOption
+                ? selectedOption.name
+                : '옵션을 선택해주세요'}
+            </Text>
+            {hasOptions && !isDisabled && (
+              <Text style={styles.dropdownArrow}>
+                {isOpen ? '▲' : '▼'}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          {isOpen && hasOptions && !isDisabled && (
+            <View style={styles.dropdownList}>
+              <ScrollView
+                style={styles.dropdownScrollView}
+                showsVerticalScrollIndicator={true}
+                nestedScrollEnabled={true}>
+                {availableOptions.map(option => (
+                  <TouchableOpacity
+                    key={option.optionId}
+                    style={styles.dropdownItem}
+                    onPress={() => handleOptionSelect(level, option.optionId)}>
+                    <View style={styles.optionItemContent}>
+                      <Text
+                        variant="bodyM"
+                        color="#111827"
+                        style={styles.dropdownItemText}>
+                        {option.name}
+                      </Text>
+                      {option.capacity !== null && (
+                        <Text
+                          variant="bodyS"
+                          color="#6b7280"
+                          style={styles.optionCapacity}>
+                          잔여: {option.remainingCount}/{option.capacity}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <Modal
@@ -76,78 +238,11 @@ export default function EventApplicationModal({
               </TouchableOpacity>
             </View>
 
-            <ScrollView 
-              style={styles.modalContent} 
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled">
-              {/* 옵션 선택 */}
-              <View style={styles.optionSection}>
-                <Text variant="bodyL" color="#111827" style={styles.optionTitle}>
-                  옵션 선택
-                </Text>
-                <View style={styles.dropdownContainer}>
-                  <TouchableOpacity
-                    style={styles.dropdownButton}
-                    onPress={() => setIsOptionDropdownOpen(!isOptionDropdownOpen)}>
-                    <Text
-                      variant="bodyM"
-                      color={selectedOption ? '#111827' : '#6b7280'}
-                      style={styles.dropdownButtonText}>
-                      {selectedOption
-                        ? options.find(opt => opt.optionId === selectedOption)?.name ||
-                          '옵션을 선택해주세요'
-                        : '옵션을 선택해주세요'}
-                    </Text>
-                    <Text style={styles.dropdownArrow}>
-                      {isOptionDropdownOpen ? '▲' : '▼'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  {isOptionDropdownOpen && (
-                    <View style={styles.dropdownList}>
-                      <ScrollView
-                        style={styles.dropdownScrollView}
-                        showsVerticalScrollIndicator={true}
-                        nestedScrollEnabled={true}>
-                        {availableOptions.map(option => (
-                          <TouchableOpacity
-                            key={option.optionId}
-                            style={styles.dropdownItem}
-                            onPress={() => {
-                              setSelectedOption(option.optionId);
-                              setIsOptionDropdownOpen(false);
-                            }}>
-                            <View style={styles.optionItemContent}>
-                              <Text
-                                variant="bodyM"
-                                color="#111827"
-                                style={styles.dropdownItemText}>
-                                {option.name}
-                              </Text>
-                              <Text
-                                variant="bodyS"
-                                color="#6b7280"
-                                style={styles.optionCapacity}>
-                                잔여: {option.remainingCount}/{option.capacity}
-                              </Text>
-                            </View>
-                          </TouchableOpacity>
-                        ))}
-                        {availableOptions.length === 0 && (
-                          <View style={styles.dropdownItem}>
-                            <Text
-                              variant="bodyM"
-                              color="#6b7280"
-                              style={styles.dropdownItemText}>
-                              선택 가능한 옵션이 없습니다.
-                            </Text>
-                          </View>
-                        )}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-              </View>
+            <View style={[styles.modalContent, styles.modalContentContainer]}>
+              {/* 옵션 선택 - 각 레벨별로 드롭다운 생성 */}
+              {Array.from({length: optionDepth}).map((_, index) =>
+                renderOptionDropdown(index),
+              )}
 
               {/* 메모 입력 */}
               <View style={styles.memoSection}>
@@ -165,32 +260,38 @@ export default function EventApplicationModal({
                   textAlignVertical="top"
                 />
               </View>
-            </ScrollView>
+            </View>
 
             {Platform.OS === 'ios' ? (
               <SafeAreaView style={styles.modalFooter} edges={['bottom']}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[
                     styles.applyButton,
                     confirmDisabled && styles.applyButtonDisabled,
                   ]}
                   onPress={handleConfirm}
                   disabled={confirmDisabled}>
-                  <Text variant="headlineM" color="#FFFFFF" style={styles.applyButtonText}>
+                  <Text
+                    variant="headlineM"
+                    color="#FFFFFF"
+                    style={styles.applyButtonText}>
                     신청 완료
                   </Text>
                 </TouchableOpacity>
               </SafeAreaView>
             ) : (
               <View style={styles.modalFooter}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[
                     styles.applyButton,
                     confirmDisabled && styles.applyButtonDisabled,
                   ]}
                   onPress={handleConfirm}
                   disabled={confirmDisabled}>
-                  <Text variant="headlineM" color="#FFFFFF" style={styles.applyButtonText}>
+                  <Text
+                    variant="headlineM"
+                    color="#FFFFFF"
+                    style={styles.applyButtonText}>
                     신청 완료
                   </Text>
                 </TouchableOpacity>
@@ -212,6 +313,7 @@ const styles = StyleSheet.create({
     width: '100%',
     flex: 1,
     justifyContent: 'flex-end',
+    alignItems: 'flex-end',
   },
   modalContainer: {
     backgroundColor: '#FFFFFF',
@@ -220,8 +322,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderBottomWidth: 0,
-    height: 470,
-    width: '100%'
+    width: '100%',
+    maxHeight: '90%',
+    alignSelf: 'flex-end',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -243,9 +346,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  modalContentContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    flex: 1,
   },
   modalFooter: {
     paddingHorizontal: 16,
@@ -271,10 +377,18 @@ const styles = StyleSheet.create({
   optionSection: {
     marginBottom: 24,
   },
-  optionTitle: {
+  optionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  optionTitle: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  optionalLabel: {
+    fontSize: 12,
+    marginLeft: 8,
   },
   dropdownContainer: {
     marginBottom: 0,
@@ -289,6 +403,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
+  },
+  dropdownButtonDisabled: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
   },
   dropdownButtonText: {
     flex: 1,
@@ -359,4 +477,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
 });
-
