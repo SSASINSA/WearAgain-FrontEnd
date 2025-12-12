@@ -65,8 +65,32 @@ export default function EventScreen() {
     }
   };
 
-  const events =
+  // 상태별 정렬 우선순위: 모집중 > 예정 > 마감
+  const getStatusPriority = (status: string): number => {
+    switch (status) {
+      case '모집중':
+        return 1;
+      case '예정':
+        return 2;
+      case '마감':
+        return 3;
+      default:
+        return 4;
+    }
+  };
+
+  const allEvents =
     data?.pages.flatMap((page: {events: EventSummary[]}) => page.events) ?? [];
+
+  // '전체' 필터일 때만 정렬 적용
+  const events =
+    selectedFilter === 'all'
+      ? [...allEvents].sort((a, b) => {
+          const priorityA = getStatusPriority(a.status);
+          const priorityB = getStatusPriority(b.status);
+          return priorityA - priorityB;
+        })
+      : allEvents;
 
   const handleEventPress = (event: EventSummary) => {
     navigation.navigate('EventDetail', {

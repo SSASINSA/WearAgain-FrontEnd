@@ -153,6 +153,7 @@ export default function EventDetailScreen() {
         onClose={() => setIsModalVisible(false)}
         onConfirm={handleApplicationConfirm}
         options={event.options}
+        optionDepth={event.optionDepth}
         isPending={applyEventMutation.isPending}
       />
     </SafeAreaView>

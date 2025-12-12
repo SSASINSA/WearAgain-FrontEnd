@@ -65,6 +65,7 @@ export type EventDetailResponse = {
   endDate: string;
   status: string;
   images: EventImageResponse[];
+  optionDepth: number;
   options: EventOptionResponse[];
   userApplication?: EventUserApplicationResponse | null;
 };
