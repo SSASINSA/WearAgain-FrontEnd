@@ -110,14 +110,11 @@ export default function EventDetailScreen() {
   );
 
   const isActionPending = applyEventMutation.isPending;
-  const isEventOpen = event.status === '모집중';
+  const isEventOpen = event.status === '진행' || event.status === '예정';
   const isApplyDisabled = !isEventOpen;
 
   const getButtonText = () => {
     if (!isEventOpen) {
-      if (event.status === '예정') {
-        return '신청 예정';
-      }
       return '신청 마감';
     }
     return '신청하기';

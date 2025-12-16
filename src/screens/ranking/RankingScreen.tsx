@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Text } from '../../components/common/Text';
 import DetailHeader from '../../components/common/DetailHeader';
-import { RankingUser, UserRankingInfo } from '../../types/ranking';
+import { RankingUser, UserRankingInfo, RankingApiResponse, RankUser } from '../../types/ranking';
 import { apiClient } from '../../api/client';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -25,19 +25,7 @@ type NavigationProps = {
   setOptions: (options: any) => void;
 };
 
-// API 응답 타입
-interface RankUser {
-  rank: number;
-  nickname: string;
-  repairCount: number;
-  rankChange: number;
-}
-
-interface RankingApiResponse {
-  comparedSnapshotDate: string;
-  topRanks: RankUser[];
-  me: RankUser;
-}
+// API 응답 타입은 ranking.ts에서 import
 
 // Mock 데이터 - 실제로는 API에서 가져와야함
 const mockUserRankingInfo: UserRankingInfo = {
@@ -249,9 +237,28 @@ export default function RankingScreen() {
 
   // API 데이터로 RankingUser 배열 변환
   const convertToRankingUsers = (apiData: RankingApiResponse): RankingUser[] => {
-    const currentUserRank = apiData.me.rank;
+    const { topRanks, me } = apiData;
+
+    // me가 null인 경우 상위 10명만 반환
+    if (!me) {
+      return topRanks.map((rank) => ({
+        rank: rank.rank,
+        userId: `user_${rank.rank}`,
+        userName: rank.nickname,
+        level: 1, // API에서 제공하지 않음, 기본값 사용
+        totalCo2Reduced: 0, // API에서 제공하지 않음
+        totalWaterSaved: 0, // API에서 제공하지 않음
+        totalEnergySaved: 0, // API에서 제공하지 않음
+        totalRepairs: rank.repairCount,
+        rankChange: rank.rankChange,
+        previousRank: rank.rank - rank.rankChange,
+        isCurrentUser: false,
+      }));
+    }
+
+    const currentUserRank = me.rank;
     
-    const converted = apiData.topRanks.map((rank) => ({
+    const converted = topRanks.map((rank) => ({
       rank: rank.rank,
       userId: `user_${rank.rank}`,
       userName: rank.nickname,
@@ -263,22 +270,22 @@ export default function RankingScreen() {
       rankChange: rank.rankChange,
       previousRank: rank.rank - rank.rankChange,
       // 현재 사용자인지 확인 (rank와 nickname으로 비교)
-      isCurrentUser: rank.rank === currentUserRank && rank.nickname === apiData.me.nickname,
+      isCurrentUser: rank.rank === currentUserRank && rank.nickname === me.nickname,
     }));
     
     // 현재 사용자가 상위 10명에 없으면 추가 (10등 밖일 경우)
     if (!converted.some(item => item.isCurrentUser)) {
       converted.push({
-        rank: apiData.me.rank,
-        userId: `user_${apiData.me.rank}`,
-        userName: apiData.me.nickname,
+        rank: me.rank,
+        userId: `user_${me.rank}`,
+        userName: me.nickname,
         level: 1,
         totalCo2Reduced: 0,
         totalWaterSaved: 0,
         totalEnergySaved: 0,
-        totalRepairs: apiData.me.repairCount,
-        rankChange: apiData.me.rankChange,
-        previousRank: apiData.me.rank - apiData.me.rankChange,
+        totalRepairs: me.repairCount,
+        rankChange: me.rankChange,
+        previousRank: me.rank - me.rankChange,
         isCurrentUser: true,
       });
     }

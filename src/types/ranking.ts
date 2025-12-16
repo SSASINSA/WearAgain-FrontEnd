@@ -28,3 +28,17 @@ export interface RankingResponse {
   rankings: RankingUser[];
 }
 
+// API 응답 타입
+export interface RankUser {
+  rank: number;
+  nickname: string;
+  repairCount: number;
+  rankChange: number;
+}
+
+export interface RankingApiResponse {
+  comparedSnapshotDate: string;
+  topRanks: RankUser[];
+  me: RankUser | null; // 로그인하지 않은 경우 null
+}
+

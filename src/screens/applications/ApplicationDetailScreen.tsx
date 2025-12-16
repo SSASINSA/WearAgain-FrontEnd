@@ -70,7 +70,7 @@ export default function ApplicationDetailScreen() {
       : '--:--';
 
   const isCancelable = React.useMemo(() => {
-    const isEventOpen = eventStatusCode === 'OPEN' || eventStatusCode === 'RUNNING';
+    const isEventOpen = eventStatusCode === 'OPEN' || eventStatusCode === 'APPROVAL';
     return isEventOpen && isApplied;
   }, [eventStatusCode, isApplied]);
 
@@ -83,6 +83,9 @@ export default function ApplicationDetailScreen() {
   const handleCloseModal = () => setShowModal(false);
 
   const handleCancelApplication = (reason: string) => {
+    if (!data) {
+      return;
+    }
     cancelApplication(
       {
         applicationId,
@@ -428,7 +431,7 @@ function resolveStatuses(
 
   const isApplied =
     applicationStatusCode === 'APPLIED' ||
-    (!applicationStatusCode && statusLabel === '진행중');
+    (!applicationStatusCode && statusLabel === '진행');
 
   return {
     eventStatusCode,

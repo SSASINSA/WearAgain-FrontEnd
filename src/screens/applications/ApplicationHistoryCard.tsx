@@ -14,7 +14,7 @@ const STATUS_THEME: Record<
   ApplicationStatusLabel,
   {background: string; text: string}
 > = {
-  진행중: {
+  진행: {
     background: '#FEE2E2',
     text: '#B91C1C',
   },
@@ -32,7 +32,11 @@ export function ApplicationHistoryCard({
   application,
   onPress,
 }: ApplicationHistoryCardProps) {
-  const theme = STATUS_THEME[application.status];
+  const displayStatus: ApplicationStatusLabel = 
+    application.applicationStatusCode?.toUpperCase() === 'APPROVAL' 
+      ? '예정' 
+      : application.status;
+  const theme = STATUS_THEME[displayStatus];
 
   return (
     <TouchableOpacity
@@ -71,7 +75,7 @@ export function ApplicationHistoryCard({
                 {backgroundColor: theme.background},
               ]}>
               <Text variant="bodyS" color={theme.text} style={styles.statusText}>
-                {application.status}
+                {displayStatus}
               </Text>
             </View>
           </View>

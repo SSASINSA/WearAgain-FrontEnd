@@ -60,6 +60,7 @@ export default function ProductDetailScreen() {
       },
       {
         onSuccess: () => {
+          Alert.alert('신청 완료', '교환 신청이 완료되었습니다.');
           setIsModalVisible(false);
         },
         onError: (error: any) => {

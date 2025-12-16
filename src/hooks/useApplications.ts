@@ -5,7 +5,11 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
-  applicationsApi
+  applicationsApi,
+  ApplicationDetailResponse,
+  ApplicationSummaryResponse,
+  ApplicationListResult,
+  CancelApplicationRequest,
 } from '../api/events/applications';
 import {
   ApplicationDetail,
@@ -24,7 +28,7 @@ type ApiError = {
       code?: string;
       errorCode?: string;
       message?: string;
-      statusCode?: number;
+      statusCode?: string | number;
     };
   };
 };
@@ -33,17 +37,16 @@ function mapStatus(status?: string): ApplicationStatusLabel {
   switch (status) {
     case 'UPCOMING':
     case 'SCHEDULED':
-    case 'OPENING':
+    case 'APPROVAL':
       return '예정';
     case 'OPEN':
-    case 'RUNNING':
-      return '진행중';
+      return '진행';
     case 'CLOSED':
     case 'FINISHED':
-    case 'ENDED':
+    case 'CLOSED':
       return '종료';
     default:
-      return '진행중';
+      return '진행';
   }
 }
 
@@ -97,7 +100,7 @@ function normalizeText(value?: string | string[]): string[] {
 }
 
 function mapOptionTrail(
-  trail: applicationsApi.ApplicationDetailResponse['optionTrail'],
+  trail: ApplicationDetailResponse['optionTrail'],
 ): ApplicationOption[] {
   if (!Array.isArray(trail)) {
     return [];
@@ -110,7 +113,7 @@ function mapOptionTrail(
 }
 
 function toSummary(
-  item: applicationsApi.ApplicationSummaryResponse,
+  item: ApplicationSummaryResponse,
 ): ApplicationSummary {
   return {
     id: String(item.applicationId),
@@ -129,7 +132,7 @@ function toSummary(
 }
 
 function toDetail(
-  payload: applicationsApi.ApplicationDetailResponse,
+  payload: ApplicationDetailResponse,
 ): ApplicationDetail {
   const base = toSummary(payload);
   return {
@@ -143,23 +146,23 @@ function toDetail(
 }
 
 export function useApplicationsList() {
-  return useInfiniteQuery({
+  return useInfiniteQuery<ApplicationListResult, Error, any, ['applications', 'list'], string | undefined>({
+    initialPageParam: undefined,
     queryKey: ['applications', 'list'],
-    queryFn: ({
-        pageParam
-      }) =>
+    queryFn: ({pageParam}) =>
       applicationsApi.getApplications({
-        cursor: pageParam ?? undefined
+        cursor: pageParam ?? undefined,
       }),
-    getNextPageParam: lastPage =>
+    getNextPageParam: (lastPage) =>
       lastPage.hasNext ? lastPage.nextCursor ?? undefined : undefined,
-    select: data => ({
-      ...data,
-      pages: data.pages.map(page => ({
-        ...page,
-        items: page.items.map(toSummary),
-      })),
-    }),
+    select: (data) =>
+      ({
+        ...data,
+        pages: data.pages.map((page) => ({
+          ...page,
+          items: page.items.map(toSummary),
+        })),
+      } as any),
   });
 }
 
@@ -174,13 +177,12 @@ export function useApplicationDetail(
       return toDetail(detail);
     },
     placeholderData: initialData
-      ? toDetail({
+      ? ({
           ...initialData,
-          eventPeriod: {
-            startDate: initialData.startDate,
-            endDate: initialData.endDate,
-          },
-        } as applicationsApi.ApplicationDetailResponse)
+          usageGuide: [],
+          precautions: [],
+          optionTrail: [],
+        } as ApplicationDetail)
       : undefined,
   });
 }
@@ -331,7 +333,7 @@ export function useCancelApplication() {
       eventId,
     }: {
       applicationId: string;
-      body: applicationsApi.CancelApplicationRequest;
+      body: CancelApplicationRequest;
       eventId?: string;
     }) => applicationsApi.cancelApplication(applicationId, body),
     onSuccess: (_, variables) => {

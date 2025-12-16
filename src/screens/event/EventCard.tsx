@@ -15,7 +15,7 @@ interface EventCardProps {
   startDate: string;
   endDate: string;
   location: string;
-  status: '예정' | '모집중' | '마감';
+  status: '예정' | '진행' | '마감';
   imageUrl?: string;
   imageSource?: any;
   onPress?: () => void;
@@ -36,7 +36,7 @@ export function EventCard({
     switch (status) {
       case '예정':
         return '#9333EA';
-      case '모집중':
+      case '진행':
         return '#FF4242';
       case '마감':
         return '#6b7280';

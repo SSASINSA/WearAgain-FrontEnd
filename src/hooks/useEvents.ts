@@ -10,7 +10,7 @@ import {
   CancelEventApplicationRequest,
 } from '../api/events/events';
 
-export type EventStatusLabel = '예정' | '모집중' | '마감';
+export type EventStatusLabel = '예정' | '진행' | '마감';
 
 export type EventSummary = {
   id: string;
@@ -74,7 +74,7 @@ function mapStatus(status: string): EventStatusLabel {
     case 'APPROVAL':
       return '예정';
     case 'OPEN':
-      return '모집중';
+      return '진행';
     case 'CLOSED':
       return '마감';
     default:
