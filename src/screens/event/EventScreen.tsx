@@ -18,7 +18,7 @@ type FilterType = 'all' | 'APPROVAL' | 'OPEN' | 'CLOSED';
 const FILTER_OPTIONS: Array<{value: FilterType; label: string}> = [
   {value: 'all', label: '전체'},
   {value: 'APPROVAL', label: '예정'},
-  {value: 'OPEN', label: '모집중'},
+  {value: 'OPEN', label: '진행'},
   {value: 'CLOSED', label: '마감'},
 ];
 
@@ -65,10 +65,10 @@ export default function EventScreen() {
     }
   };
 
-  // 상태별 정렬 우선순위: 모집중 > 예정 > 마감
+  // 상태별 정렬 우선순위: 진행 > 예정 > 마감
   const getStatusPriority = (status: string): number => {
     switch (status) {
-      case '모집중':
+      case '진행':
         return 1;
       case '예정':
         return 2;

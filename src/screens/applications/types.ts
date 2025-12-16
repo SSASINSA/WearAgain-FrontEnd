@@ -1,4 +1,4 @@
-export type ApplicationStatusLabel = '진행중' | '종료' | '예정';
+export type ApplicationStatusLabel = '진행' | '종료' | '예정';
 
 export type ApplicationSummary = {
   id: string;
